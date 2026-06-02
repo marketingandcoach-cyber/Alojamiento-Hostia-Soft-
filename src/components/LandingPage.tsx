@@ -38,11 +38,15 @@ import {
   Mic,
   Languages,
   Activity,
-  Heart
+  Heart,
+  Instagram,
+  Facebook,
+  Linkedin
 } from "lucide-react";
 import { motion } from "motion/react";
 import { LOCALES, SupportedLanguages } from "../locales";
 import { DiagrammersLogo, DiagrammersFullLogo } from "./DiagrammersLogo";
+import { HostiaSoftLogo, HostiaSoftFullLogo } from "./HostiaSoftLogo";
 
 interface LandingPageProps {
   onNavigateToStudio: (userProfile?: { email: string; name: string; workspace: string }) => void;
@@ -878,43 +882,37 @@ export function LandingPage({
     <div className="bg-slate-950 text-slate-100 min-h-screen relative overflow-hidden font-sans">
       
       {/* BRAND PHILOSOPHY TOP ANNOUNCEMENT BAR */}
-      <div className="bg-gradient-to-r from-emerald-950/80 via-indigo-950/80 to-amber-950/80 border-b border-slate-900 px-4 py-2 text-center relative z-50">
+      <div className="bg-gradient-to-r from-cyan-950/80 via-purple-950/80 to-amber-950/80 border-b border-slate-900 px-4 py-2 text-center relative z-50">
         <p className="text-[10px] sm:text-xs font-semibold tracking-wider text-slate-200 animate-pulse flex items-center justify-center gap-2 flex-wrap">
-          <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="font-extrabold uppercase tracking-widest text-emerald-400 text-[10px]">HOSTIA SOFT</span>
+          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="font-extrabold uppercase tracking-widest text-cyan-400 text-[10px]">HOSTIA SOFT</span>
           <span className="text-slate-700">•</span>
-          <span className="italic text-indigo-200">"Softwares democráticos para cambiar el mundo"</span>
-          <span className="text-slate-700">•</span>
-          <span className="bg-emerald-505/10 border border-emerald-500/25 text-emerald-400 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold">Partner: Google AI Studio 🤝</span>
+          <span className="italic text-slate-200 font-medium">"Crea sin límites. Comparte sin fronteras."</span>
+          <span className="text-slate-705">•</span>
+          <span className="bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold">Partner: Google AI Studio 🤝</span>
         </p>
       </div>
 
       {/* BACKGROUND DECORATIVE CINEMATIC GLOW (AMBIENT LIGHTS) */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute top-1/3 right-1/4 w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-[140px] pointer-events-none"></div>
-      <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute top-1/3 right-1/4 w-[600px] h-[600px] bg-fuchsia-500/5 rounded-full blur-[140px] pointer-events-none"></div>
+      <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[100px] pointer-events-none"></div>
 
       {/* DYNAMIC SITE LANDING HEADER */}
       <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2.5 select-none">
-              {hubTab === "aitransvoice" ? (
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-emerald-550/20">
-                  <Mic className="w-5 h-5 text-emerald-300 animate-pulse" />
-                </div>
-              ) : (
-                <DiagrammersLogo className="w-9 h-9 shrink-0" glow />
-              )}
+              <HostiaSoftLogo className="w-10 h-10 shrink-0" glow />
               <div>
-                <h1 className="text-base sm:text-lg font-black tracking-[0.05em] uppercase flex items-center gap-2 text-slate-100" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
-                  {hubTab === "aitransvoice" ? (
-                    <>AITRANSVOICE <span className="text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded shrink-0">AI TECH</span></>
-                  ) : (
-                    <>DIAGRAMMERS <span className="text-[9px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded shrink-0">HUB BD</span></>
-                  )}
+                <h1 className="text-base sm:text-lg font-black tracking-[0.05em] uppercase flex items-center gap-1.5 text-slate-100" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+                  HOSTIA<span className="bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-400 bg-clip-text text-transparent ml-0.5 font-bold">SOFT</span>
+                  <span className="text-slate-800 text-xs mx-1">|</span>
+                  <span className="text-[10px] sm:text-xs text-slate-300 font-bold tracking-normal font-sans pt-0.5">
+                    {hubTab === "aitransvoice" ? "AITRANSVOICE" : "DIAGRAMMERS"}
+                  </span>
                 </h1>
-                <p className="text-[10px] text-slate-400 font-mono">
+                <p className="text-[9px] text-slate-400 font-mono">
                   {hubTab === "aitransvoice" ? "Ecosistema Tecnológico de Voz e Idioma" : "Suite de Maquetación Editorial KDP"}
                 </p>
               </div>
@@ -1009,28 +1007,32 @@ export function LandingPage({
         
         {hubTab === "aitransvoice" ? (
           <div className="space-y-24 animate-fadeIn">
-            {/* AITRANSVOICE HERO */}
-            <section className="text-center max-w-4xl mx-auto space-y-6">
-              <span className="inline-flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/25 px-3.5 py-1.5 rounded-full text-xs font-semibold text-emerald-400 font-mono tracking-wider">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400 rotate-12" />
-                AITRANSVOICE: TECNOLOGÍA VOCAL E IDIOMA DEL FUTURO
+            {/* AITRANSVOICE HERO - POWERED BY HOSTIA SOFT */}
+            <section className="text-center max-w-4xl mx-auto flex flex-col items-center space-y-6 pt-8">
+              
+              {/* Dynamic glowing full Hostia Soft emblem system */}
+              <HostiaSoftFullLogo glow={true} className="pb-4 transform hover:scale-[1.01] transition-transform duration-300" />
+              
+              <span className="inline-flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/20 px-3.5 py-1.5 rounded-full text-xs font-semibold text-cyan-400 font-mono tracking-wider">
+                <Sparkles className="w-3.5 h-3.5 text-fuchsia-400 rotate-12" />
+                HOSTIA SOFT • SOFTWARES DEMOCRÁTICOS PARA CAMBIAR EL MUNDO
               </span>
               
               <h2 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-white leading-[1.1]" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
-                Tu Voz y tus Libros en <span className="bg-gradient-to-r from-emerald-400 via-emerald-300 to-indigo-450 bg-clip-text text-transparent">Cualquier Idioma</span> de Forma Instantánea
+                Tu Voz y tus Libros en <span className="bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-400 bg-clip-text text-transparent">Cualquier Idioma</span> de Forma Instantánea
               </h2>
               
-              <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-2xl mx-auto font-sans font-medium">
+              <p className="text-base sm:text-lg text-slate-350 leading-relaxed max-w-2xl mx-auto font-sans font-medium">
                 Moderniza tu localización de audio. Traduce borradores o manuscritos, clona tu timbre de voz en 5 segundos, dobla producciones de video y exporta audiolibros profesionales listos para Audible y Spotify.
               </p>
               
               <div className="pt-6 flex flex-wrap justify-center gap-4">
                 <a
                   href="#aitranslator-widget"
-                  className="bg-gradient-to-r from-emerald-500 to-indigo-650 hover:from-emerald-400 hover:to-indigo-550 text-white font-extrabold px-8 py-4 rounded-2xl text-sm sm:text-base tracking-wide shadow-xl shadow-emerald-550/20 transition-all hover:scale-105 hover:-translate-y-0.5 active:scale-100 flex items-center gap-3 cursor-pointer no-underline block"
+                  className="bg-gradient-to-r from-cyan-500 via-fuchsia-600 to-orange-500 hover:from-cyan-400 hover:via-fuchsia-500 hover:to-orange-400 text-white font-extrabold px-8 py-4 rounded-2xl text-sm sm:text-base tracking-wide shadow-xl shadow-cyan-500/20 shadow-fuchsia-500/10 transition-all hover:scale-105 hover:-translate-y-0.5 active:scale-100 flex items-center gap-3 cursor-pointer no-underline block"
                 >
                   <span>Probar Síntesis en Vivo</span>
-                  <Mic className="w-5 h-5 text-emerald-250 animate-bounce" />
+                  <Mic className="w-5 h-5 text-white animate-bounce" />
                 </a>
                 
                 <button
@@ -1635,22 +1637,26 @@ export function LandingPage({
           </div>
         ) : (
           <>
-            {/* HERO SECTION */}
-            <section className="text-center max-w-4xl mx-auto space-y-6 animate-fade-in">
-          <span className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3.5 py-1.5 rounded-full text-xs font-semibold text-amber-400 font-mono tracking-wider">
-            <Sparkles className="w-3.5 h-3.5" />
-            {t.tagline}
-          </span>
+            {/* HERO SECTION - POWERED BY HOSTIA SOFT */}
+            <section className="text-center max-w-4xl mx-auto flex flex-col items-center space-y-6 pt-8 animate-fade-in">
+              
+              {/* Dynamic glowing full Hostia Soft emblem system for DIAGRAMMERS */}
+              <HostiaSoftFullLogo glow={true} className="pb-4 transform hover:scale-[1.01] transition-transform duration-300" />
 
-          <h2 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-white leading-[1.1]" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
-            {language === "en" ? (
-              <>Typeset & Format Your <span className="bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 bg-clip-text text-transparent">Perfect Book</span> in One Click</>
-            ) : language === "pt" ? (
-              <>Formatte e Compagine seu <span className="bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 bg-clip-text text-transparent">Livro Perfeito</span> com um Clique</>
-            ) : (
-              <>Maqueta y Compagina tu <span className="bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 bg-clip-text text-transparent">Libro Perfecto</span> en un Clic</>
-            )}
-          </h2>
+              <span className="inline-flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/20 px-3.5 py-1.5 rounded-full text-xs font-semibold text-cyan-400 font-mono tracking-wider">
+                <Sparkles className="w-3.5 h-3.5 text-fuchsia-400" />
+                HOSTIA SOFT • SOFTWARES DEMOCRÁTICOS PARA CAMBIAR EL MUNDO
+              </span>
+
+              <h2 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-white leading-[1.1]" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+                {language === "en" ? (
+                  <>Typeset & Format Your <span className="bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-400 bg-clip-text text-transparent">Perfect Book</span> in One Click</>
+                ) : language === "pt" ? (
+                  <>Formatte e Compagine seu <span className="bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-400 bg-clip-text text-transparent">Livro Perfeito</span> com um Clique</>
+                ) : (
+                  <>Maqueta y Compagina tu <span className="bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-400 bg-clip-text text-transparent">Libro Perfecto</span> en un Clic</>
+                )}
+              </h2>
 
           <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-2xl mx-auto font-sans">
             {t.heroSubtitle}
@@ -1659,7 +1665,7 @@ export function LandingPage({
           <div className="pt-6 flex flex-wrap justify-center gap-4">
             <button
               onClick={onNavigateToStudio}
-              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-8 py-4 rounded-2xl text-sm sm:text-base tracking-wide shadow-xl shadow-amber-500/30 transition-all hover:scale-105 hover:-translate-y-0.5 active:scale-100 flex items-center gap-3 cursor-pointer"
+              className="bg-gradient-to-r from-cyan-500 via-fuchsia-600 to-orange-500 hover:from-cyan-400 hover:via-fuchsia-500 hover:to-orange-400 text-white font-extrabold px-8 py-4 rounded-2xl text-sm sm:text-base tracking-wide shadow-xl shadow-cyan-500/20 shadow-fuchsia-500/10 transition-all hover:scale-105 hover:-translate-y-0.5 active:scale-100 flex items-center gap-3 cursor-pointer"
             >
               <span>{t.liveSoftware}</span>
               <ArrowRight className="w-5 h-5 stroke-[2.5]" />
@@ -3259,15 +3265,47 @@ export function LandingPage({
       </main>
 
       {/* COMPACT CINEMATIC FOOTER */}
-      <footer className="border-t border-slate-900 bg-slate-950/80 py-10 mt-20 relative z-10 text-center space-y-4">
-        <div className="flex flex-col items-center justify-center -my-6">
-          <DiagrammersFullLogo className="w-52 h-52 animate-fadeIn" textColor="text-white" glow />
+      <footer className="border-t border-slate-900 bg-slate-950/80 py-12 mt-20 relative z-10 text-center space-y-6">
+        <div className="flex flex-col items-center justify-center">
+          <HostiaSoftFullLogo className="w-full max-w-md transform hover:scale-[1.01] transition-transform duration-300" glow={true} />
         </div>
-        <p className="text-[10px] text-slate-500 font-mono leading-relaxed max-w-md mx-auto">
+
+        {/* Social Media Links for @hostiasoft */}
+        <div className="flex flex-wrap justify-center items-center gap-6 pt-2">
+          <a 
+            href="https://instagram.com/hostiasoft" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="flex items-center gap-1.5 text-xs text-slate-450 hover:text-cyan-400 hover:scale-105 transition-all font-mono tracking-wider"
+          >
+            <Instagram className="w-4 h-4 text-slate-450 hover:text-cyan-400" />
+            <span>INSTAGRAM</span>
+          </a>
+          <a 
+            href="https://facebook.com/hostiasoft" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="flex items-center gap-1.5 text-xs text-slate-450 hover:text-fuchsia-400 hover:scale-105 transition-all font-mono tracking-wider"
+          >
+            <Facebook className="w-4 h-4 text-slate-450 hover:text-fuchsia-400" />
+            <span>FACEBOOK</span>
+          </a>
+          <a 
+            href="https://linkedin.com/company/hostiasoft" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="flex items-center gap-1.5 text-xs text-slate-450 hover:text-orange-450 hover:scale-105 transition-all font-mono tracking-wider"
+          >
+            <Linkedin className="w-4 h-4 text-slate-450 hover:text-orange-450" />
+            <span>LINKEDIN</span>
+          </a>
+        </div>
+
+        <p className="text-[10px] text-slate-500 font-mono leading-relaxed max-w-md mx-auto px-4">
           Plataforma de alta fidelidad para el formateo y preservación literaria. Cobertura bajo el Convenio de Berna de propiedad intelectual.
         </p>
         <div className="text-[9px] text-slate-600 font-mono">
-          © 2026 DIAGRAMMERS Press Group. Todos los derechos reservados.
+          © 2026 HOSTIA SOFT Press Group • Softwares democráticos para cambiar el mundo.
         </div>
       </footer>
 

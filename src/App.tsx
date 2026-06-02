@@ -62,6 +62,7 @@ import { BookStyleSettings, Chapter, BookMetadata, SimulatedPage, ARCHETYPES, Il
 import { TEXT_TEMPLATES, GENRE_PRESETS } from "./data";
 import { LandingPage } from "./components/LandingPage";
 import { DiagrammersLogo, DiagrammersFullLogo } from "./components/DiagrammersLogo";
+import { HostiaSoftLogo } from "./components/HostiaSoftLogo";
 import { LOCALES, SupportedLanguages } from "./locales";
 import mammoth from "mammoth";
 
@@ -4174,11 +4175,14 @@ ${generatedScreenplayText}
       <header id="app-header" className="no-print bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 shadow-md">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center select-none">
-            <DiagrammersLogo className="w-10 h-10 shrink-0" glow />
+            <HostiaSoftLogo className="w-10 h-10 shrink-0" glow />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold tracking-[0.05em] text-white flex items-center gap-2" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
-              DIAGRAMMERS <span className="text-[10px] tracking-normal font-mono font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded">STUDIO v2.5</span>
+            <h1 className="text-lg sm:text-xl font-black tracking-[0.05em] text-white flex items-center gap-1.5 flex-wrap" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+              HOSTIA<span className="bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-400 bg-clip-text text-transparent font-bold">SOFT</span>
+              <span className="text-slate-800 text-sm mx-1">|</span>
+              <span className="text-sm font-bold text-slate-300">DIAGRAMMERS</span>
+              <span className="text-[9px] tracking-normal font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded">STUDIO V2.5</span>
             </h1>
             <p className="text-xs text-slate-400">
               {language === "en" 
@@ -4342,102 +4346,136 @@ ${generatedScreenplayText}
         {/* LEFT WORKSPACE: SIDEBAR PANEL SECTION (Hidden on print) */}
         <aside id="workspace-sidebar" className="no-print w-full lg:w-[480px] border-r border-slate-800 bg-slate-950/80 flex flex-col shrink-0 overflow-y-auto">
           
-          {/* Main Module Tabs selector */}
-          <div className="flex border-b border-slate-800 sticky top-0 bg-slate-950 z-20 overflow-x-auto scrollbar-none">
+          {/* Main Module Tabs selector (Redesigned with beautiful, legible, wide icons, organized explicitly as asked) */}
+          <div className="grid grid-cols-4 border-b border-slate-800 bg-slate-950 sticky top-0 z-20 font-sans">
+            {/* Button 1: Estilos */}
             <button
               onClick={() => setActiveTab("preset")}
-              className={`flex-1 min-w-[70px] py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider border-b-2 transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
                 activeTab === "preset"
-                  ? "border-amber-500 text-amber-400 bg-amber-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                  ? "border-cyan-500 text-cyan-400 bg-cyan-500/5"
+                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
               }`}
+              title="Estilos de Diseño Editorial por Inteligencia Artificial (Sugerencias de Estilo)"
             >
-              <Sparkles className="w-3.5 h-3.5 shrink-0" />
-              <span>Estilos</span>
+              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "preset" ? "bg-cyan-500/10" : ""}`}>
+                <Sparkles className={`w-5.5 h-5.5 shrink-0 ${activeTab === "preset" ? "text-cyan-400" : "text-slate-400"}`} />
+              </div>
+              <span className="text-[9.5px] tracking-tight text-center truncate w-full">Estilo</span>
             </button>
+
+            {/* Button 2: Maqueta */}
             <button
               onClick={() => setActiveTab("manual")}
-              className={`flex-1 min-w-[70px] py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider border-b-2 transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
                 activeTab === "manual"
-                  ? "border-amber-500 text-amber-400 bg-amber-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                  ? "border-fuchsia-500 text-fuchsia-400 bg-fuchsia-500/5"
+                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
               }`}
+              title="Márgenes, Sangrías y Maquetación Física"
             >
-              <Sliders className="w-3.5 h-3.5 shrink-0" />
-              <span>Maqueta</span>
+              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "manual" ? "bg-fuchsia-500/10" : ""}`}>
+                <Sliders className={`w-5.5 h-5.5 shrink-0 ${activeTab === "manual" ? "text-fuchsia-400" : "text-slate-400"}`} />
+              </div>
+              <span className="text-[9.5px] tracking-tight text-center truncate w-full">Maqueta</span>
             </button>
+
+            {/* Button 3: Texto */}
             <button
               onClick={() => setActiveTab("content")}
-              className={`flex-1 min-w-[70px] py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider border-b-2 transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
                 activeTab === "content"
-                  ? "border-amber-500 text-amber-400 bg-amber-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                  ? "border-orange-500 text-orange-400 bg-orange-500/5"
+                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
               }`}
+              title="Carga de Texto y Edición del Manuscrito"
             >
-              <FileText className="w-3.5 h-3.5 shrink-0" />
-              <span>Texto/IA</span>
+              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "content" ? "bg-orange-500/10" : ""}`}>
+                <FileText className={`w-5.5 h-5.5 shrink-0 ${activeTab === "content" ? "text-orange-400" : "text-slate-400"}`} />
+              </div>
+              <span className="text-[9.5px] tracking-tight text-center truncate w-full">Texto</span>
             </button>
+
+            {/* Button 4: Imprenta / KDP */}
             <button
               onClick={() => setActiveTab("compatibility")}
-              className={`flex-1 min-w-[85px] py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider border-b-2 transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
                 activeTab === "compatibility"
                   ? "border-amber-500 text-amber-400 bg-amber-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
               }`}
-              title="Formateo de Imprenta física, Amazon KDP y compatibilidad con Adobe, Canva e Corel"
+              title="Esquemas de Imprenta y Compatibilidad KDP"
             >
-              <FileDown className="w-3.5 h-3.5 shrink-0" />
-              <span>Imprenta/KDP</span>
+              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "compatibility" ? "bg-amber-500/10" : ""}`}>
+                <Printer className={`w-5.5 h-5.5 shrink-0 ${activeTab === "compatibility" ? "text-amber-400" : "text-slate-400"}`} />
+              </div>
+              <span className="text-[9.5px] tracking-tight text-center truncate w-full">Imprenta</span>
             </button>
+
+            {/* Button 5: Derechos */}
             <button
               onClick={() => setActiveTab("copyright")}
-              className={`flex-1 min-w-[85px] py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider border-b-2 transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
                 activeTab === "copyright"
-                  ? "border-amber-500 text-amber-400 bg-amber-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/5"
+                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
               }`}
-              title="Derechos de autor legales, ISBN gratuito de KDP y sincronización a Safe Creative"
+              title="Derechos de Autor e ISBN KDP"
             >
-              <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
-              <span>Derechos/ISBN</span>
+              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "copyright" ? "bg-emerald-500/10" : ""}`}>
+                <ShieldCheck className={`w-5.5 h-5.5 shrink-0 ${activeTab === "copyright" ? "text-emerald-400" : "text-slate-400"}`} />
+              </div>
+              <span className="text-[9.5px] tracking-tight text-center truncate w-full">Derechos</span>
             </button>
+
+            {/* Button 6: Editores */}
             <button
               onClick={() => setActiveTab("pitch")}
-              className={`flex-1 min-w-[85px] py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider border-b-2 transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
                 activeTab === "pitch"
-                  ? "border-amber-500 text-amber-400 bg-amber-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                  ? "border-blue-500 text-blue-400 bg-blue-500/5"
+                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
               }`}
-              title="Buscador de editoriales reales, propuesta de email con IA y seguimiento de envíos"
+              title="Prospección y Contacto de Editoriales"
             >
-              <TrendingUp className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-              <span>Prospección Editoriales</span>
+              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "pitch" ? "bg-blue-500/10" : ""}`}>
+                <TrendingUp className={`w-5.5 h-5.5 shrink-0 ${activeTab === "pitch" ? "text-blue-400" : "text-slate-400"}`} />
+              </div>
+              <span className="text-[9.5px] tracking-tight text-center truncate w-full">Editores</span>
             </button>
+
+            {/* Button 7: Voz & Audio */}
             <button
               onClick={() => setActiveTab("multimedia")}
-              className={`flex-1 min-w-[85px] py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider border-b-2 transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
                 activeTab === "multimedia"
-                  ? "border-amber-500 text-amber-400 bg-amber-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                  ? "border-purple-500 text-purple-400 bg-purple-500/5"
+                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
               }`}
-              title="Locución Narrativa de Voz Clonada y Soundtrack Spotify para capítulos"
+              title="Voz Clonada con IA y Soundtrack"
             >
-              <Headphones className="w-3.5 h-3.5 shrink-0 text-amber-500" />
-              <span>Voz y Spotify</span>
+              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "multimedia" ? "bg-purple-500/10" : ""}`}>
+                <Headphones className={`w-5.5 h-5.5 shrink-0 ${activeTab === "multimedia" ? "text-purple-400" : "text-slate-400"}`} />
+              </div>
+              <span className="text-[9.5px] tracking-tight text-center truncate w-full">Voz/Audio</span>
             </button>
+
+            {/* Button 8: Guión MAV */}
             <button
               onClick={() => setActiveTab("screenplay")}
-              className={`flex-1 min-w-[90px] py-3 text-[11px] sm:text-xs font-bold uppercase tracking-wider border-b-2 transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
                 activeTab === "screenplay"
-                  ? "border-amber-500 text-amber-300 bg-amber-500/10"
-                  : "border-transparent text-slate-350 hover:text-slate-100 hover:bg-slate-900"
+                  ? "border-rose-500 text-rose-450 bg-rose-500/5"
+                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
               }`}
               title="Guión Cinematográfico MAVERICK PREMIUM"
             >
-              <Clapperboard className="w-3.5 h-3.5 shrink-0 text-amber-400 animate-pulse" />
-              <span className="flex items-center gap-1">
+              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "screenplay" ? "bg-rose-500/10" : ""}`}>
+                <Clapperboard className={`w-5.5 h-5.5 shrink-0 animate-pulse ${activeTab === "screenplay" ? "text-rose-400" : "text-slate-400"}`} />
+              </div>
+              <span className="text-[9.5px] tracking-tight text-center truncate w-full flex items-center justify-center gap-0.5">
                 <span>Guión</span>
-                <span className="text-[7.5px] scale-90 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold px-1 py-0.2 rounded">MAV</span>
+                <span className="text-[7px] bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold px-1 py-0.2 rounded scale-90">MAV</span>
               </span>
             </button>
           </div>
@@ -9945,10 +9983,10 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
             </button>
 
             {/* Glowing Logo Circle */}
-            <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-tr from-amber-600 to-amber-400 p-0.5 shadow-2xl shadow-amber-500/20 flex items-center justify-center relative animate-pulse">
-              <div className="absolute inset-0 bg-amber-500/10 blur-xl rounded-full"></div>
-              <div className="bg-slate-950 rounded-full w-full h-full flex items-center justify-center">
-                <DiagrammersLogo className="w-10 h-10 text-amber-500 stroke-[2.5]" glow />
+            <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-tr from-cyan-500 via-fuchsia-600 to-orange-500 p-0.5 shadow-2xl shadow-cyan-500/20 flex items-center justify-center relative animate-pulse">
+              <div className="absolute inset-0 bg-cyan-500/10 blur-xl rounded-full"></div>
+              <div className="bg-slate-950 rounded-full w-full h-full flex items-center justify-center animate-spin-slow">
+                <HostiaSoftLogo className="w-12 h-12" glow={true} />
               </div>
             </div>
 
