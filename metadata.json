@@ -1,0 +1,6 @@
+{
+  "name": "DIAGRAMMERS",
+  "description": "El entorno inteligente de diagramación, maqueta y compaginación editorial profesional para escritores de libros.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

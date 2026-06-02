@@ -1,0 +1,111 @@
+@import url('https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Crimson+Pro:ital,wght@0,400;0,650;1,400&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Great+Vibes&family=Inter:wght@300;400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&family=Outfit:wght@400;600;700&family=Pinyon+Script&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@400;600&display=swap');
+@import "tailwindcss";
+
+@layer utilities {
+  /* Book Simulator Paper Styling */
+  .book-paper-cream {
+    background-color: #faf6eb !important;
+    color: #2b251a !important;
+    background-image: radial-gradient(rgba(0, 0, 0, 0.015) 1px, transparent 0), radial-gradient(rgba(0, 0, 0, 0.015) 1px, transparent 0);
+    background-size: 8px 8px;
+    background-position: 0 0, 4px 4px;
+  }
+  .book-paper-white {
+    background-color: #ffffff !important;
+    color: #1a1a1a !important;
+  }
+  .book-paper-sepia {
+    background-color: #f4edd8 !important;
+    color: #382c16 !important;
+    background-image: repeating-linear-gradient(rgba(56, 44, 22, 0.01) 0px, rgba(56, 44, 22, 0.01) 1px, transparent 1px, transparent 8px);
+  }
+  .book-paper-charcoal {
+    background-color: #1e2022 !important;
+    color: #e5e7eb !important;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.005) 1px, transparent 0);
+    background-size: 16px 16px;
+  }
+
+  /* Drop Caps Designs */
+  .dropcap-classic::first-letter {
+    float: left;
+    font-size: 3.5em;
+    line-height: 0.8;
+    margin-top: 0.15em;
+    margin-right: 0.12em;
+    font-weight: bold;
+    font-family: inherit;
+    color: currentColor;
+    text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.1);
+  }
+
+  .dropcap-ornately::first-letter {
+    float: left;
+    font-size: 3.8em;
+    line-height: 0.75;
+    margin-top: 0.12em;
+    margin-right: 0.15em;
+    font-weight: 800;
+    font-family: 'Cinzel', 'EB Garamond', serif;
+    color: #b45309; /* warm amber */
+    border: 1px solid rgba(180, 83, 9, 0.2);
+    padding: 2px 8px;
+    background-color: rgba(180, 83, 9, 0.05);
+    border-radius: 4px;
+    margin-left: -2px;
+  }
+
+  .dropcap-modern::first-letter {
+    float: left;
+    font-size: 3.6em;
+    line-height: 0.8;
+    margin-top: 0.1em;
+    margin-right: 0.1em;
+    font-weight: 900;
+    font-family: 'Outfit', 'Space Grotesk', sans-serif;
+    color: #dc2626; /* bright crimson / modern accent */
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Custom Page Shadows for realistic book fold */
+  .book-spine-left {
+    box-shadow: inset -15px 0 25px -10px rgba(0, 0, 0, 0.15);
+  }
+  .book-spine-right {
+    box-shadow: inset 15px 0 25px -10px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Print Setup */
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+    font-size: 11pt !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-page-break {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+  .print-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+  .print-book-page {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 1.5in !important;
+    height: auto !important;
+    width: 100% !important;
+    page-break-inside: avoid !important;
+  }
+}
