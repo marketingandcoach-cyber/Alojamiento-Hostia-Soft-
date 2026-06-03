@@ -6413,7 +6413,56 @@ ${generatedScreenplayText}
                     DIAGRAMMERS • Propiedad Intelectual e ISBN
                   </h3>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    Protege tu manuscrito al instante de forma jurídica e internacional. Adquiere tu ISBN comercial gratuito de Amazon KDP y automatiza el registro seguro en Safe Creative con sello criptográfico SHA-256 directo en las páginas de tu libro.
+                    Protege tu manuscrito al instante de forma jurídica e internacional. Adquiere tu ISBN comercial gratuito de Amazon KDP y automatiza el registro seguro en Safe Creative con sello criptográfico SHA-256 directo en las páginas de tu libro. Es importante tramitar estos registros usando tus propias cuentas para garantizar la seguridad de tu obra.
+                  </p>
+                </div>
+
+                {/* CRUCIAL USER WARNING & DIRECT PLATFORMS ACCESS BUTTONS */}
+                <div className="p-4 bg-gradient-to-br from-amber-500/10 via-slate-950 to-slate-950 rounded-xl border border-amber-500/25 space-y-3">
+                  <div className="flex items-center gap-2 text-amber-400 font-extrabold text-[11px] uppercase tracking-wider">
+                    <AlertCircle className="w-4.5 h-4.5 shrink-0" />
+                    <span>Importante: Trámites Oficiales en tus Propias Cuentas</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Para registrar legalmente tus derechos y distribuir tu libro, debes realizar las gestiones en los servicios oficiales <strong>usando tu propia cuenta de autor</strong>. No utilices códigos de prueba de forma comercial. Además, recuerda que <strong>el ISBN gratuito otorgado por Amazon KDP está restringido única y exclusivamente para ser distribuido a través de Amazon</strong>; usarlo con otros editores independientes podría violar sus políticas.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {/* Official Safe Creative Link */}
+                    <a 
+                      href="https://www.safecreative.org/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3.5 bg-indigo-950/50 hover:bg-indigo-900/40 border border-indigo-500/30 hover:border-indigo-400/60 rounded-lg transition-all group cursor-pointer"
+                    >
+                      <div className="space-y-0.5 text-left">
+                        <span className="text-[9px] font-bold text-indigo-400 uppercase block tracking-wider font-mono">1. SAFE CREATIVE OFICIAL</span>
+                        <span className="text-[11px] text-slate-200 block">Registrar Autoría de Obra</span>
+                      </div>
+                      <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
+                        <Globe className="w-4 h-4" />
+                      </div>
+                    </a>
+
+                    {/* Official Amazon KDP Link */}
+                    <a 
+                      href="https://kdp.amazon.com/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3.5 bg-amber-500/30 hover:bg-amber-905/20 border border-amber-500/30 hover:border-amber-400/60 rounded-lg transition-all group cursor-pointer"
+                    >
+                      <div className="space-y-0.5 text-left">
+                        <span className="text-[9px] font-bold text-amber-400 uppercase block tracking-wider font-mono font-mono">2. PANEL AMAZON KDP</span>
+                        <span className="text-[11px] text-slate-200 block">Crear Cuenta y Publicar</span>
+                      </div>
+                      <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+                        <Globe className="w-4 h-4" />
+                      </div>
+                    </a>
+                  </div>
+                  
+                  <p className="text-[10px] text-slate-500 leading-normal block">
+                    *Tip: Te sugerimos maquetar tu libro en nuestro editor primero. Una vez finalices la estructura, accede a Amazon KDP o Safe Creative comercial con los enlaces correspondientes, obtén los códigos auténticos e ingrésalos en esta sección para recalcular la página de créditos y el simulador de códigos de barras.
                   </p>
                 </div>
 
@@ -6429,13 +6478,13 @@ ${generatedScreenplayText}
                         </div>
                         <div>
                           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                            Registro de Autoría Digital (Safe Creative)
+                            Previsualizar Registro (Safe Creative Mock)
                           </h4>
-                          <span className="text-[10px] text-slate-500 font-mono">Prueba legal bajo Convenio de Berna</span>
+                          <span className="text-[10px] text-slate-500 font-mono">Maqueta de Protección Digital</span>
                         </div>
                       </div>
                       <p className="text-xs text-slate-400 leading-relaxed">
-                        Genera una firma criptográfica hash de tipo SHA-256 inmutable basada exclusivamente en el contenido de tu manuscrito. Safe Creative asocia esta firma a tu identidad como salvaguarda ante plagios.
+                        Incrusta temporalmente una firma criptográfica hash SHA-256 en tus páginas para revisar el espacio tipográfico en el pliego de créditos. Recuerda tramitar el registro oficial en su portal con tu propia cuenta.
                       </p>
 
                       {/* Live SHA256 display */}
@@ -6540,21 +6589,21 @@ ${generatedScreenplayText}
                         </div>
                         <div>
                           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                            Gestor de ISBN Global (Amazon KDP Link)
+                            Simulador e Ingreso de ISBN-13
                           </h4>
-                          <span className="text-[10px] text-slate-500 font-mono">Identificador de libro universal</span>
+                          <span className="text-[10px] text-slate-500 font-mono">Maqueta KDP y Código de Barras</span>
                         </div>
                       </div>
-                      <p className="text-xs text-slate-400 leading-relaxed">
-                        Para distribuir tu libro comercialmente en papel o tapa dura a través de Amazon, necesitas un código ISBN-13 exclusivo. Amazon te lo facilita de manera gratuita durante el proceso de maquetado físico en su plataforma.
+                      <p className="text-xs text-slate-400 leading-relaxed font-sans">
+                        El código ISBN gratuito de Amazon KDP está <strong>exclusivamente restringido para distribución en Amazon</strong>. Está prohibido utilizarlo en otros editores. Registra tu ISBN propio o de KDP oficial para maquetar el código de barras definitivo.
                       </p>
 
-                      <div className="p-3 bg-emerald-950/10 rounded-lg border border-emerald-500/10 flex gap-2.5 items-start">
-                        <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 font-mono">
-                          i
+                      <div className="p-3 bg-red-950/20 rounded-lg border border-red-500/10 flex gap-2.5 items-start">
+                        <div className="w-5 h-5 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 font-mono">
+                          !
                         </div>
-                        <p className="text-[10px] text-slate-400 leading-relaxed">
-                          Adquiere tu código en KDP, cópialo aquí, y nuestro algoritmo creará de forma automatizada las pautas tipográficas de barra legal para evitar que Amazon rechace las primeras páginas de tu manuscrito.
+                        <p className="text-[10px] text-slate-350 leading-relaxed">
+                          Utiliza el "ISBN de Prueba" para ensayar visualmente el código de barras y la página de créditos, y una vez finalices, reemplázalo con tu código auténtico de autor de KDP.
                         </p>
                       </div>
                     </div>
@@ -6577,20 +6626,20 @@ ${generatedScreenplayText}
                         <div className="p-3.5 bg-emerald-500/5 rounded-xl border border-emerald-500/15 space-y-2">
                           <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold">
                             <BadgeCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                            <span>¡CÓDIGO ISBN MAQUETADO Y VINCULADO!</span>
+                            <span>¡ISBN PROVISIONAL VINCULADO!</span>
                           </div>
                           <div className="text-[11px] text-slate-300">
                             <p className="font-mono bg-emerald-500/10 p-2 rounded text-center select-all font-bold tracking-widest text-emerald-300 uppercase">{metadata.isbn}</p>
                             <p className="mt-1.5 text-[10px] text-slate-400 leading-normal">
-                              El sistema ha asignado este ISBN a tu página de créditos virtual y calculará la pauta del código de barras gráfico en el pliego de contraportada de forma dinámica.
+                              Este ISBN provisional se ha enlazado a tu maqueta virtual. Úsalo temporalmente para verificar la alineación del código de barras gráfico y la página de créditos antes de publicar oficialmente.
                             </p>
                           </div>
                           <div className="flex gap-2 pt-1">
                             <button
                               onClick={handleTransferToKDP}
-                              className="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-slate-950 font-bold py-1.5 px-3 rounded flex-1 transition-colors cursor-pointer"
+                              className="text-[10px] bg-slate-800 hover:bg-slate-750 text-slate-350 font-bold py-1.5 px-3 rounded flex-1 transition-colors cursor-pointer"
                             >
-                              Autoenviar Metadatos a KDP
+                              Autoenviar Metadatos (Simular KDP)
                             </button>
                             <button
                               onClick={() => {
@@ -6622,11 +6671,11 @@ ${generatedScreenplayText}
                           <div className="flex gap-2">
                             <button
                               onClick={handleSimulateISBN}
-                              className="flex-1 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-slate-950 text-[11px] font-bold py-2 px-3 rounded-lg shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                              className="flex-1 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-slate-950 text-[11px] font-bold py-2 px-3 rounded-lg shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer font-sans"
                               title="Simular la API de Amazon KDP para autoproveer un ISBN de prueba"
                             >
                               <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                              <span>ISBN Genérico Amazon KDP</span>
+                              <span>ISBN de Prueba KDP</span>
                             </button>
                             <input
                               type="text"
@@ -6642,7 +6691,7 @@ ${generatedScreenplayText}
                             />
                           </div>
                           <span className="text-[10px] text-slate-500 block text-center leading-normal">
-                            *Usa la cámara para capturar cubiertas de libros físicos, o selecciona uno de los libros clásicos integrados en el simulador para autopoblar la ficha de metatados.
+                            *Escribe tu ISBN definitivo o haz clic en "ISBN de Prueba KDP" para previsualizar el código de barras y corroborar la maquetación.
                           </span>
                         </div>
                       )}
