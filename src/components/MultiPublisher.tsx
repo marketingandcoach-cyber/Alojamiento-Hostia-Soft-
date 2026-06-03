@@ -130,6 +130,26 @@ export function MultiPublisher({
       groups: [
         { id: "yt-1", name: "Pestaña Comunidad Canal Principal", url: "https://youtube.com/@mi_canal/community", active: true }
       ]
+    },
+    tiktok: {
+      name: "TikTok Campaigns",
+      enabled: true,
+      color: "border-cyan-500/30 text-cyan-400 bg-cyan-500/5 hover:bg-cyan-500/10",
+      icon: "🎵",
+      groups: [
+        { id: "tk-1", name: "Tips de Libros & BookTok Colaborativo", url: "https://www.tiktok.com", active: true },
+        { id: "tk-2", name: "Escritores Tendencias de KDP & Novela", url: "https://www.tiktok.com", active: false }
+      ]
+    },
+    threads: {
+      name: "Threads Feed",
+      enabled: true,
+      color: "border-zinc-400/30 text-zinc-300 bg-zinc-400/5 hover:bg-zinc-400/10",
+      icon: "🧵",
+      groups: [
+        { id: "th-1", name: "Hilos de Escritura y Club Literario", url: "https://www.threads.net", active: true },
+        { id: "th-2", name: "Debates Generales de Autoedición", url: "https://www.threads.net", active: false }
+      ]
     }
   });
 
@@ -159,7 +179,7 @@ export function MultiPublisher({
   const [activeSegment, setActiveSegment] = useState<"composer" | "academia" | "metrics">("composer");
   const [totalCopiesCopied, setTotalCopiesCopied] = useState<number>(0);
   const [socialClicks, setSocialClicks] = useState<number>(0);
-  const [academyTab, setAcademyTab] = useState<"organic" | "meta" | "google" | "microsoft" | "amazon">("organic");
+  const [academyTab, setAcademyTab] = useState<"organic" | "meta" | "google" | "microsoft" | "amazon" | "tiktok" | "threads">("organic");
 
   // Cycle the SEO news ticker every 6.5 seconds
   useEffect(() => {
@@ -1250,17 +1270,22 @@ export function MultiPublisher({
 
           {/* ACADEMY TABS */}
           <div className="flex flex-wrap justify-center gap-1.5 max-w-3xl mx-auto bg-slate-950/80 border border-slate-850 p-1 rounded-xl">
-            {(["organic", "meta", "google", "microsoft", "amazon"] as const).map((tab) => (
+            {(["organic", "meta", "google", "microsoft", "amazon", "tiktok", "threads"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setAcademyTab(tab)}
-                className={`flex-1 min-w-[100px] px-2.5 py-2.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase transition-all tracking-wider cursor-pointer ${
+                className={`flex-1 min-w-[100px] px-2.5 py-2 rounded-lg text-[9px] sm:text-xs font-bold uppercase transition-all tracking-wider cursor-pointer ${
                   academyTab === tab
                     ? "bg-slate-800 text-white shadow-inner"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
-                {tab === "organic" ? "🌱 Orgánico & Spam" : tab === "meta" ? "📘 Meta Ads" : tab === "google" ? "🔍 Google Ads" : tab === "microsoft" ? "💼 Microsoft B2B" : "📦 Amazon Ads"}
+                {tab === "organic" ? "🌱 Orgánica" : 
+                 tab === "meta" ? "📘 Meta Ads" : 
+                 tab === "google" ? "🔍 Google Ads" : 
+                 tab === "microsoft" ? "💼 Microsoft" : 
+                 tab === "amazon" ? "📦 Amazon" : 
+                 tab === "tiktok" ? "🎵 TikTok" : "🧵 Threads"}
               </button>
             ))}
           </div>
@@ -1447,6 +1472,82 @@ export function MultiPublisher({
                   </div>
                 </>
               )}
+
+              {academyTab === "tiktok" && (
+                <>
+                  <h4 className="font-extrabold text-base text-white flex items-center gap-2">
+                    <span className="text-cyan-400">🎵</span> TikTok & BookTok Viral: El Poder del Formato Corto
+                  </h4>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    TikTok y el canal #BookTok se han convertido en los mayores prescriptores mundiales de libros KDP y formación. Su algoritmo se enfoca puramente en la retención inicial y la interacción orgánica.
+                  </p>
+                  <div className="space-y-3 p-4 bg-slate-950 rounded-xl border border-slate-850">
+                    <strong className="text-[11px] text-cyan-400 uppercase tracking-widest font-mono block">Estrategias TikTok & BookTok:</strong>
+                    <ul className="space-y-2 text-[11px] text-slate-350 list-disc list-inside">
+                      <li><strong>El Gancho de los 3 Segundos:</strong> Muestra tu mockup, abre una pregunta de alta tensión o enseña el pliego impreso antes de un corte dinámico de escena.</li>
+                      <li><strong>Audios en Tendencia Comercial:</strong> Empareja tus copias neuronales con sonidos trending autorizados para empresas para duplicar tu distribución básica.</li>
+                      <li><strong>Llamada Indirecta (Enlace Perfil):</strong> Dirige suavemente al usuario al enlace de tu perfil utilizando transiciones visuales limpias (overlays).</li>
+                    </ul>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-850 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-950/40 p-3.5 rounded-xl">
+                    <div className="space-y-1">
+                      <span className="text-[10px] uppercase font-mono font-bold text-slate-400 tracking-wider flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+                        TikTok Business Center
+                      </span>
+                      <p className="text-[11px] text-slate-400 leading-normal">Aprende sobre el píxel de TikTok, tendencias musicales y campañas de conversión Spark Ads.</p>
+                    </div>
+                    <a
+                      href="https://ads.tiktok.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3.5 py-2.5 rounded-xl text-[10px] font-black uppercase bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-all font-sans tracking-wide shrink-0 whitespace-nowrap"
+                    >
+                      <span>TikTok Ads</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </>
+              )}
+
+              {academyTab === "threads" && (
+                <>
+                  <h4 className="font-extrabold text-base text-white flex items-center gap-2">
+                    <span className="text-zinc-200">🧵</span> Threads Conversacional: El Algoritmo del Debate Sincero
+                  </h4>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Threads favorece el formato discursivo, los hilos de opinión literaria y los debates rápidos. Premia el tiempo de lectura prolongado y los comentarios directos por encima de los enlaces masivos.
+                  </p>
+                  <div className="space-y-3 p-4 bg-slate-950 rounded-xl border border-slate-850">
+                    <strong className="text-[11px] text-zinc-300 uppercase tracking-widest font-mono block">Estrategias de Threads Growth:</strong>
+                    <ul className="space-y-2 text-[11px] text-slate-350 list-disc list-inside">
+                      <li><strong>Micro-Hilos de Valor:</strong> No concentres todo tu briefing en un solo post; cuéntalo en un hilo de 3 mensajes que enganche secuencialmente.</li>
+                      <li><strong>Generadores de Opinión:</strong> Termina tus copias con una pregunta abierta o un dilema ortotípico ("¿Usas rayas de diálogo largas o guión medio?").</li>
+                      <li><strong>Evitar Enlaces Fríos:</strong> Coloca el enlace o llamada final a tu web interactiva preferentemente en los comentarios o en el último sub-hilo.</li>
+                    </ul>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-850 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-950/40 p-3.5 rounded-xl">
+                    <div className="space-y-1">
+                      <span className="text-[10px] uppercase font-mono font-bold text-slate-400 tracking-wider flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-ping" />
+                        Threads Social Hub
+                      </span>
+                      <p className="text-[11px] text-slate-400 leading-normal">Espacio oficial para explorar tendencias de microblogging, interacciones de creadores y debate orgánico.</p>
+                    </div>
+                    <a
+                      href="https://www.threads.net/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3.5 py-2.5 rounded-xl text-[10px] font-black uppercase bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-all font-sans tracking-wide shrink-0 whitespace-nowrap"
+                    >
+                      <span>Abrir Threads</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* ESTIMATED TRAFFIC BUDGET SIMULATOR PANEL */}
@@ -1467,19 +1568,19 @@ export function MultiPublisher({
                 <div className="flex justify-between">
                   <span className="text-slate-400">Costo por Clic Promedio:</span>
                   <span className="text-emerald-400">
-                    {academyTab === "organic" ? "$0.18" : academyTab === "meta" ? "$0.14" : academyTab === "google" ? "$0.32" : academyTab === "microsoft" ? "$0.20" : "$0.25"} USD
+                    ${academyTab === "organic" ? "0.18" : academyTab === "meta" ? "0.14" : academyTab === "google" ? "0.32" : academyTab === "microsoft" ? "0.20" : academyTab === "amazon" ? "0.25" : academyTab === "tiktok" ? "0.11" : "0.15"} USD
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-slate-900 pt-2 text-white font-extrabold">
                   <span>Tráfico Proyectado (Clics):</span>
                   <span className="text-cyan-400">
-                    {Math.floor(((totalCopiesCopied ? Math.max(40, totalCopiesCopied * 20) : 100) / (academyTab === "organic" ? 0.18 : academyTab === "meta" ? 0.14 : academyTab === "google" ? 0.32 : academyTab === "microsoft" ? 0.20 : 0.25)))}
+                    {Math.floor(((totalCopiesCopied ? Math.max(40, totalCopiesCopied * 20) : 100) / (academyTab === "organic" ? 0.18 : academyTab === "meta" ? 0.14 : academyTab === "google" ? 0.32 : academyTab === "microsoft" ? 0.20 : academyTab === "amazon" ? 0.25 : academyTab === "tiktok" ? 0.11 : 0.15)))}
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-dashed border-slate-900 pt-2 text-[11px]">
                   <span className="text-slate-350">Conversiones Estimadas (2%):</span>
                   <span className="text-white">
-                    {Math.max(1, Math.floor(((totalCopiesCopied ? Math.max(40, totalCopiesCopied * 20) : 100) / (academyTab === "organic" ? 0.18 : academyTab === "meta" ? 0.14 : academyTab === "google" ? 0.32 : academyTab === "microsoft" ? 0.20 : 0.25)) * 0.02))} alumnos
+                    {Math.max(1, Math.floor(((totalCopiesCopied ? Math.max(40, totalCopiesCopied * 20) : 100) / (academyTab === "organic" ? 0.18 : academyTab === "meta" ? 0.14 : academyTab === "google" ? 0.32 : academyTab === "microsoft" ? 0.20 : academyTab === "amazon" ? 0.25 : academyTab === "tiktok" ? 0.11 : 0.15)) * 0.02))} alumnos
                   </span>
                 </div>
               </div>

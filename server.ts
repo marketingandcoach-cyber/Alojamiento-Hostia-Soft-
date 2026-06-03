@@ -938,6 +938,7 @@ Debes analizar el nicho solicitado: "${niche || "General"}" y adaptar el vocabul
 Reglas por red:
 - Instagram (ig): Enfocado en lo visual, ganchos fuertes de apertura cortados, espaciados generosos, hashtags concentrados abajo.
 - TikTok: Súper informal, frases cortas directas, preguntas capciosas, ritmo rápido, muchas etiquetas virales.
+- Threads: Muy dialéctico y reflexivo, hilos cortos enlazados de debate interactivo, tono de opinión sincera, desenfadado y directo.
 - Facebook (fb): Narrativa tipo historia (storytelling), testimonios de valor, enlaces claros, emojis de soporte.
 - Telegram: Directo al punto, negritas para contrastar datos técnicos, viñetas, enlaces limpios, llamadas inmediatas a unirse.
 - X (Twitter): Muy compacto, asertivo, ideas clave, hashtags de tendencia mínimos, debate inmediato.
