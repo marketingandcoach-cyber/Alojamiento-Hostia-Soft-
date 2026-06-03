@@ -75,6 +75,63 @@ async function generateContentWithRetry(params: any, retries = 3, initialDelay =
   throw lastError;
 }
 
+// Safe clean and parse JSON helper to protect against markdown blocks and trailing commas from Gemini
+function safeParseJSON(inputText: string | undefined | null, fallback: any = {}): any {
+  if (!inputText) return fallback;
+  let cleanText = inputText.trim();
+  
+  // Strip markdown blocks if present (```json or ``` text block wrapper)
+  if (cleanText.startsWith("```")) {
+    const lines = cleanText.split("\n");
+    if (lines[0].startsWith("```")) {
+      lines.shift();
+    }
+    if (lines[lines.length - 1].startsWith("```")) {
+      lines.pop();
+    }
+    cleanText = lines.join("\n").trim();
+  }
+  
+  try {
+    return JSON.parse(cleanText);
+  } catch (err) {
+    console.warn("[Gemini JSON Parse] Direct JSON.parse failed. Trying substring extraction...", err);
+    
+    // Attempt substring extraction to locate JSON bounds
+    const firstBrace = cleanText.indexOf("{");
+    const lastBrace = cleanText.lastIndexOf("}");
+    const firstBracket = cleanText.indexOf("[");
+    const lastBracket = cleanText.lastIndexOf("]");
+    
+    let startIdx = -1;
+    let endIdx = -1;
+    
+    if (firstBrace !== -1 && lastBrace !== -1) {
+      if (firstBracket !== -1 && firstBracket < firstBrace && lastBracket !== -1 && lastBracket > lastBrace) {
+        startIdx = firstBracket;
+        endIdx = lastBracket;
+      } else {
+        startIdx = firstBrace;
+        endIdx = lastBrace;
+      }
+    } else if (firstBracket !== -1 && lastBracket !== -1) {
+      startIdx = firstBracket;
+      endIdx = lastBracket;
+    }
+    
+    if (startIdx !== -1 && endIdx !== -1) {
+      try {
+        const extracted = cleanText.substring(startIdx, endIdx + 1);
+        return JSON.parse(extracted);
+      } catch (innerErr) {
+        console.error("[Gemini JSON Parse] Substring extraction parsing failed too:", innerErr);
+      }
+    }
+    
+    return fallback;
+  }
+}
+
 // Safe heuristic parser of book styles when the AI service is offline or overloaded
 function getFallbackStyleSuggestion(text: string): any {
   const sample = text.toLowerCase();
@@ -295,7 +352,7 @@ Debes responder estrictamente en formato JSON con la siguiente estructura:
       }
     });
  
-    const config = JSON.parse(response.text || "{}");
+    const config = safeParseJSON(response.text, {});
     res.json(config);
   } catch (error: any) {
     console.error("Error analyzing style:", error);
@@ -418,7 +475,7 @@ Debes responder estrictamente en formato JSON con la siguiente estructura y tipo
       }
     });
  
-    const suggestion = JSON.parse(response.text || "{}");
+    const suggestion = safeParseJSON(response.text, {});
     res.json(suggestion);
   } catch (error: any) {
     console.error("Error generating style suggestion by text:", error);
@@ -504,7 +561,7 @@ Responde estrictamente en formato JSON utilizando el esquema indicado:
       }
     });
 
-    const parsedData = JSON.parse(response.text || '{"chapters": []}');
+    const parsedData = safeParseJSON(response.text, { chapters: [] });
     res.json(parsedData);
   } catch (error: any) {
     console.error("Error formatting text:", error);
@@ -685,7 +742,7 @@ Para cada ilustración propuesta, debes devolver un objeto en formato JSON con e
       }
     });
 
-    const parsedData = JSON.parse(response.text || '{"illustrations": []}');
+    const parsedData = safeParseJSON(response.text, { illustrations: [] });
     res.json(parsedData);
   } catch (error: any) {
     console.error("Error suggesting illustrations:", error);
@@ -772,7 +829,7 @@ ${(textExcerpt || "").substring(0, 1500)}
       }
     });
 
-    const result = JSON.parse(response.text || "{}");
+    const result = safeParseJSON(response.text, {});
     res.json(result);
   } catch (error: any) {
     console.error("Error generating editorial pitch:", error);
@@ -942,10 +999,12 @@ Responde estrictamente en formato JSON de acuerdo a este esquema:
       }
     });
 
-    const parsedData = JSON.parse(response.text || '{"corrections": [], "magicSuggestions": []}');
+    console.info(`[Correct & Magic] Iniciando análisis para texto de longitud: ${text.length}`);
+    const parsedData = safeParseJSON(response.text, { corrections: [], magicSuggestions: [] });
+    console.info(`[Correct & Magic] Análisis completado con éxito. Encontrados: ${parsedData.corrections?.length || 0} correcciones, ${parsedData.magicSuggestions?.length || 0} sugerencias mágicas.`);
     res.json(parsedData);
   } catch (error: any) {
-    console.error("Error analyzing correct-and-magic:", error);
+    console.error("Error analizando correct-and-magic:", error);
     res.json({ corrections: [], magicSuggestions: [] });
   }
 });
@@ -1125,7 +1184,7 @@ Por favor, genera para cada uno de estos destinos un copy de conversión único 
       }
     });
 
-    const parsedData = JSON.parse(response.text || '{"results":[],"mediaPrompt":"","tickerTip":""}');
+    const parsedData = safeParseJSON(response.text, { results: [], mediaPrompt: "", tickerTip: "" });
     res.json(parsedData);
   } catch (error: any) {
     console.error("Error generating multipublisher copies:", error);
