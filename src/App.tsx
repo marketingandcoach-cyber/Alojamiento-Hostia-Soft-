@@ -732,22 +732,52 @@ export default function App() {
 
   const applyTextImprovement = (original: string, replacement: string) => {
     if (!editingChapterText) return;
-    if (!editingChapterText.includes(original)) {
-      triggerStudioToast("No se ubica el texto original exacto en el capítulo. Es posible que lo hayas modificado.", "warning");
-      return;
-    }
-    const updatedText = editingChapterText.replace(original, replacement);
-    updateChapterTextWithHistory(updatedText);
-    triggerStudioToast("¡Cambio literario aplicado con éxito!", "success");
+    
+    let applied = false;
+    let updatedText = editingChapterText;
 
-    // Remove suggestions that refer to this match
-    if (textAnalysisResults) {
-      const filteredCorrections = textAnalysisResults.corrections.filter(item => item.original !== original);
-      const filteredMagic = textAnalysisResults.magicSuggestions.filter(item => item.original !== original);
-      setTextAnalysisResults({
-        corrections: filteredCorrections,
-        magicSuggestions: filteredMagic
-      });
+    // 1. Try exact match first
+    if (editingChapterText.includes(original)) {
+      updatedText = editingChapterText.replace(original, replacement);
+      applied = true;
+    } else {
+      // 2. Try trimmed/flexible match (ignoring different space types, line breaks, double spaces)
+      const cleanString = (str: string) => str.replace(/\s+/g, " ").trim();
+      const cleanedOriginal = cleanString(original);
+      
+      const words = cleanedOriginal.split(" ").filter(w => w.trim().length > 0);
+      if (words.length > 0) {
+        try {
+          // Create regex that permits any whitespace characters (\s+) between original words
+          const escapedWords = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+");
+          const flexibleRegex = new RegExp(escapedWords, "g");
+          if (flexibleRegex.test(editingChapterText)) {
+            updatedText = editingChapterText.replace(flexibleRegex, replacement);
+            applied = true;
+          }
+        } catch (e) {
+          console.error("Error matching flexible regex:", e);
+        }
+      }
+    }
+
+    if (applied) {
+      updateChapterTextWithHistory(updatedText);
+      triggerStudioToast("¡Cambio literario aplicado con éxito!", "success");
+
+      // Remove suggestions that refer to or match this replacement
+      if (textAnalysisResults) {
+        const filteredCorrections = textAnalysisResults.corrections.filter(item => item.original !== original);
+        const filteredMagic = textAnalysisResults.magicSuggestions.filter(item => item.original !== original);
+        setTextAnalysisResults({
+          corrections: filteredCorrections,
+          magicSuggestions: filteredMagic
+        });
+      }
+    } else {
+      // 3. Last fallback: Inform the user and let them know we couldn't match the exact text,
+      // but maybe suggest highlighting or let them copy-paste.
+      triggerStudioToast("No pudimos ubicar el fragmento exacto en el cuerpo del capítulo. Intenta re-analizar o realizar el cambio manualmente.", "warning");
     }
   };
 
