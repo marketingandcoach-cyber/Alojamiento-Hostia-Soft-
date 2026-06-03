@@ -41,12 +41,14 @@ import {
   Heart,
   Instagram,
   Facebook,
-  Linkedin
+  Linkedin,
+  Share2
 } from "lucide-react";
 import { motion } from "motion/react";
 import { LOCALES, SupportedLanguages } from "../locales";
 import { DiagrammersLogo, DiagrammersFullLogo } from "./DiagrammersLogo";
 import { HostiaSoftLogo, HostiaSoftFullLogo } from "./HostiaSoftLogo";
+import { MultiPublisher } from "./MultiPublisher";
 
 interface LandingPageProps {
   onNavigateToStudio: (userProfile?: { email: string; name: string; workspace: string }) => void;
@@ -100,8 +102,21 @@ export function LandingPage({
   const [cyphertext, setCyphertext] = useState<string>("U2FsdGVkX1+Vb89g8FASDe9823hjasg78sdFasdKJASD");
   const [activeSecurityTab, setActiveSecurityTab] = useState<"mss_encryption" | "anticlone" | "cloudrun_firewall" | "copyright">("mss_encryption");
 
+  // --- CUSTOM TOAST / ALERTS FOR IFRAME COMPATIBILITY ---
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<"info" | "success" | "warning">("info");
+
+  const showToast = (message: string, type: "info" | "success" | "warning" = "info") => {
+    setToastMessage(message);
+    setToastType(type);
+    setTimeout(() => {
+      setToastMessage((curr) => curr === message ? null : curr);
+    }, 4500);
+  };
+
   // --- UNIFIED AITRANSVOICE AI VOICE HUB STATES ---
-  const [hubTab, setHubTab] = useState<"aitransvoice" | "diagrammers">("aitransvoice");
+  const [hubTab, setHubTab] = useState<"hostiasoft" | "aitransvoice" | "diagrammers" | "multipublisher">("hostiasoft");
+  const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [voiceTextSource, setVoiceTextSource] = useState<string>("Hola, bienvenido a la nueva plataforma AITRANSVOICE. Aquí puedes traducir cualquier texto y escucharlo sintetizado de inmediato con voces naturales.");
   const [voiceLanguageSource, setVoiceLanguageSource] = useState<string>("es");
   const [voiceLanguageTarget, setVoiceLanguageTarget] = useState<string>("en");
@@ -136,24 +151,48 @@ export function LandingPage({
     }
   }, [hubTab]);
 
-  const handleTranslateText = () => {
+  const handleTranslateText = async () => {
     const source = voiceTextSource.trim();
     if (!source) return;
     
-    if (voiceLanguageTarget === "en") {
-      if (source.toLowerCase().includes("hola, bienvenido")) {
-        setVoiceTranslatedText("Hello, welcome to the new AITRANSVOICE platform. Here you can write or translate any text and listen to it immediately with high-fidelity speech synthesis.");
-      } else {
-        setVoiceTranslatedText(`[AITRANSVOICE Engine] ${source} - Localized into seamless English narration.`);
+    setIsTranslating(true);
+    try {
+      const response = await fetch("/api/translate-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: source, targetLanguage: voiceLanguageTarget })
+      });
+      if (!response.ok) {
+        throw new Error(`Error de red: ${response.status}`);
       }
-    } else if (voiceLanguageTarget === "pt") {
-      if (source.toLowerCase().includes("hola, bienvenido")) {
-        setVoiceTranslatedText("Olá, bem-vindo à nova plataforma AITRANSVOICE. Aqui você pode escrever ou traduzir qualquer texto e ouvi-lo imediatamente com síntese de voz de alta fidelidade.");
+      const data = await response.json();
+      setVoiceTranslatedText(data.translatedText || source);
+      if (data.fallback) {
+        showToast("La traducción se calculó de forma alternativa.", "info");
       } else {
-        setVoiceTranslatedText(`[AITRANSVOICE Português] ${source} - Processado e adaptado para português con precisão.`);
+        showToast("Traducción completada con éxito por la IA.", "success");
       }
-    } else {
-      setVoiceTranslatedText(source);
+    } catch (err: any) {
+      console.error("Translation fetch error:", err);
+      // Traditional safe fallback in case of connection failure
+      if (voiceLanguageTarget === "en") {
+        if (source.toLowerCase().includes("hola, bienvenido")) {
+          setVoiceTranslatedText("Hello, welcome to the new AITRANSVOICE platform. Here you can write or translate any text and listen to it immediately with high-fidelity speech synthesis.");
+        } else {
+          setVoiceTranslatedText(`[AITRANSVOICE Backup] ${source} - Localized into English style.`);
+        }
+      } else if (voiceLanguageTarget === "pt") {
+        if (source.toLowerCase().includes("hola, bienvenido")) {
+          setVoiceTranslatedText("Olá, bem-vindo à nova plataforma AITRANSVOICE. Aqui você puede escrever ou traduzir qualquer texto e ouvi-lo imediatamente com síntese de voz de alta fidelidade.");
+        } else {
+          setVoiceTranslatedText(`[AITRANSVOICE Backup] ${source} - Processado e adaptado para português.`);
+        }
+      } else {
+        setVoiceTranslatedText(source);
+      }
+      showToast("Se aplicó traducción local de respaldo.", "info");
+    } finally {
+      setIsTranslating(false);
     }
   };
 
@@ -172,6 +211,9 @@ export function LandingPage({
         let targetLang = "es-ES";
         if (lang === "en") targetLang = "en-US";
         else if (lang === "pt") targetLang = "pt-BR";
+        else if (lang === "fr") targetLang = "fr-FR";
+        else if (lang === "it") targetLang = "it-IT";
+        else if (lang === "de") targetLang = "de-DE";
         else targetLang = "es-ES";
         
         // Handle James actor British RP override
@@ -747,6 +789,12 @@ export function LandingPage({
         targetLang = "pt-BR";
       } else if (language === "en") {
         targetLang = "en-US";
+      } else if (language === "fr") {
+        targetLang = "fr-FR";
+      } else if (language === "it") {
+        targetLang = "it-IT";
+      } else if (language === "de") {
+        targetLang = "de-DE";
       } else {
         targetLang = "es-MX"; // Lively spanish
       }
@@ -902,33 +950,48 @@ export function LandingPage({
       <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2.5 select-none">
+            <button 
+              onClick={() => setHubTab("hostiasoft")}
+              className="flex items-center gap-2.5 select-none hover:opacity-90 transition-all cursor-pointer text-left focus:outline-none"
+            >
               <HostiaSoftLogo className="w-10 h-10 shrink-0" glow />
               <div>
                 <h1 className="text-base sm:text-lg font-black tracking-[0.05em] uppercase flex items-center gap-1.5 text-slate-100" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
                   HOSTIA<span className="bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-400 bg-clip-text text-transparent ml-0.5 font-bold">SOFT</span>
                   <span className="text-slate-800 text-xs mx-1">|</span>
                   <span className="text-[10px] sm:text-xs text-slate-300 font-bold tracking-normal font-sans pt-0.5">
-                    {hubTab === "aitransvoice" ? "AITRANSVOICE" : "DIAGRAMMERS"}
+                    {hubTab === "hostiasoft" ? "Ecosistema" : hubTab === "aitransvoice" ? "AITRANSVOICE" : hubTab === "multipublisher" ? "MULTIPUBLISHER" : "DIAGRAMMERS"}
                   </span>
                 </h1>
                 <p className="text-[9px] text-slate-400 font-mono">
-                  {hubTab === "aitransvoice" ? "Ecosistema Tecnológico de Voz e Idioma" : "Suite de Maquetación Editorial KDP"}
+                  {hubTab === "hostiasoft" ? "Plataforma de Softwares Democráticos" : hubTab === "aitransvoice" ? "Ecosistema de Voz e Idioma" : hubTab === "multipublisher" ? "Multiplicador Orgánico Anti-Spam" : "Suite de Maquetación Editorial KDP"}
                 </p>
               </div>
-            </div>
+            </button>
           </div>
           
           <span className="md:hidden text-[9px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded font-mono font-bold">
-            {hubTab === "aitransvoice" ? "AITV SUITE" : "KDP ACTIVE"}
+            {hubTab === "hostiasoft" ? "ECO" : hubTab === "aitransvoice" ? "AITV SUITE" : hubTab === "multipublisher" ? "MUTIPUB" : "KDP ACTIVE"}
           </span>
         </div>
 
         {/* --- CENTRED HUB SELECTOR --- */}
-        <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-2xl w-full md:w-auto max-w-md justify-center">
+        <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-2xl w-full md:w-auto max-w-xl justify-center gap-0.5">
+          <button
+            onClick={() => setHubTab("hostiasoft")}
+            className={`flex-1 md:flex-initial flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+              hubTab === "hostiasoft"
+                ? "bg-slate-800 text-cyan-400 border border-slate-700 shadow-md font-extrabold"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>Inicio</span>
+          </button>
+
           <button
             onClick={() => setHubTab("aitransvoice")}
-            className={`flex-1 md:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            className={`flex-1 md:flex-initial flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
               hubTab === "aitransvoice"
                 ? "bg-gradient-to-r from-emerald-500 to-indigo-600 text-white shadow-md font-extrabold scale-102 font-bold"
                 : "text-slate-400 hover:text-white"
@@ -940,7 +1003,7 @@ export function LandingPage({
           
           <button
             onClick={() => setHubTab("diagrammers")}
-            className={`flex-1 md:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            className={`flex-1 md:flex-initial flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
               hubTab === "diagrammers"
                 ? "bg-amber-500 text-slate-950 shadow-md font-extrabold scale-102 font-bold"
                 : "text-slate-400 hover:text-white"
@@ -950,18 +1013,31 @@ export function LandingPage({
             <span>DIAGRAMMERS</span>
           </button>
 
+          <button
+            onClick={() => setHubTab("multipublisher")}
+            className={`flex-1 md:flex-initial flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+              hubTab === "multipublisher"
+                ? "bg-gradient-to-r from-emerald-450 via-cyan-400 to-indigo-500 text-slate-950 shadow-md font-extrabold scale-102 font-bold"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span>MULTIPUBLISHER</span>
+          </button>
+
           {/* DYNAMIC FUTURE ADDITION BUTTON FOR MORE SOFTWARES */}
           <button
             onClick={() => {
-              alert(
-                "¡Bienvenido al Ecosistema Multifacético de HOSTIA SOFT! Aquí se incorporará cada uno de tus nuevos desarrollos o softwares con IA. Compartirán la estructura de diseño suizo, persistencia extrema, integración de donaciones libres y el soporte partner de Google AI Studio. ¡Tu creatividad es el único límite!"
+              showToast(
+                "¡Bienvenido a HOSTIA SOFT! Aquí se incorporará cada uno de sus nuevos desarrollos democráticos. Compartirán la estructura de diseño suizo, alta velocidad, persistencia y el soporte de inteligencia artificial.",
+                "info"
               );
             }}
-            className="flex-initial flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold text-slate-500 hover:text-emerald-400 hover:bg-slate-950/20 transition-all cursor-pointer"
+            className="flex-initial flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold text-slate-500 hover:text-emerald-400 hover:bg-slate-950/20 transition-all cursor-pointer"
             title="Añadir nueva herramienta al Hub"
           >
             <span className="text-xs font-black text-emerald-400">+</span>
-            <span className="hidden sm:inline">NUEVA APP</span>
+            <span className="hidden sm:inline">NUEVOS</span>
           </button>
         </div>
 
@@ -969,7 +1045,7 @@ export function LandingPage({
           {/* LANGAUGE switcher dropdown / selector buttons */}
           <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl shrink-0">
             <Globe className="w-3.5 h-3.5 text-slate-400 mx-1.5" />
-            {(["es", "en", "pt"] as const).map((lang) => (
+            {(["es", "en", "pt", "fr", "it", "de"] as const).map((lang) => (
               <button
                 key={lang}
                 onClick={() => setLanguage(lang)}
@@ -1005,7 +1081,250 @@ export function LandingPage({
        {/* MAIN CONTAINER */}
       <main className="max-w-7xl mx-auto px-6 py-12 md:py-20 relative z-10 space-y-24">
         
-        {hubTab === "aitransvoice" ? (
+        {hubTab === "hostiasoft" ? (
+          <div className="space-y-16 animate-fadeIn py-6">
+            {/* HERO SYSTEM INTEGRATED HOME */}
+            <section className="text-center max-w-4xl mx-auto flex flex-col items-center space-y-6">
+              <HostiaSoftFullLogo glow={true} className="pb-4 transform hover:scale-[1.02] transition-transform duration-300 w-full max-w-xl" />
+              
+              <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-cyan-500/10 via-fuchsia-500/10 to-orange-500/10 border border-fuchsia-500/20 px-4 py-1.5 rounded-full text-xs font-bold text-fuchsia-300 font-mono tracking-wider">
+                <Sparkles className="w-3.5 h-3.5 text-fuchsia-400 rotate-12" />
+                ECOSISTEMA DE SOFTWARES DEMOCRÁTICOS & LIBRES
+              </span>
+
+              <h2 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-white leading-[1.12]" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+                Tecnología de Alta Gama <span className="bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-400 bg-clip-text text-transparent">Sin Barreras</span> Colectivas
+              </h2>
+
+              <p className="text-base sm:text-lg text-slate-350 leading-relaxed max-w-3xl mx-auto font-sans font-medium">
+                En <strong>Hostiasoft</strong> creamos y alojamos una plataforma de <strong>softwares altamente innovadores y democráticos</strong>. Nuestro propósito es proveer herramientas de última generación a todo el mundo libres de barreras comerciales. Para comenzar, presiona <strong>DIAGRAMMERS</strong>, <strong>AITRANSVOICE</strong> o <strong>MULTIPUBLISHER</strong> a continuación para probar cada software, y únete a un ecosistema en constante evolución donde seguiremos creando y adicionando más soluciones innovadoras.
+              </p>
+            </section>
+
+            {/* SELECTION GRID CONTAINER */}
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto pt-6">
+              {/* Product 1: DIAGRAMMERS */}
+              <div className="bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/40 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-amber-500/5 group relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/10 transition-colors"></div>
+                
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                      <Book className="w-6 h-6" />
+                    </div>
+                    <span className="text-[10px] uppercase font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-full">
+                      Suite Editorial
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-xl sm:text-2xl font-black text-white group-hover:text-amber-400 transition-colors" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+                      DIAGRAMMERS
+                    </h3>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      El estándar moderno para escritores independientes. Maqueta tus obras en formato digital e impreso en minutos, calcula pliegos precisos para Amazon KDP, y asegura tus derechos de autor legalmente.
+                    </p>
+                  </div>
+
+                  <ul className="text-xs text-slate-350 space-y-2 pt-2">
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>Maquetador Suizo con pliego ortotipográfico</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>ISBN de autor provisional y código de barras</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>Páginas de créditos inteligentes & Safe Creative</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="pt-8">
+                  <button
+                    onClick={() => {
+                      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                        window.speechSynthesis.cancel();
+                      }
+                      setHubTab("diagrammers");
+                    }}
+                    className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3.5 px-5 rounded-2xl text-xs sm:text-sm tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-amber-500/10"
+                  >
+                    <span>Ingresar a Diagrammers</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Product 2: AITRANSVOICE */}
+              <div className="bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-emerald-500/40 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-emerald-500/5 group relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-emerald-500/10 transition-colors"></div>
+
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                      <Mic className="w-6 h-6" />
+                    </div>
+                    <span className="text-[10px] uppercase font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2.5 py-1 rounded-full">
+                      Suite de Voz e Idiomas
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-xl sm:text-2xl font-black text-white group-hover:text-emerald-400 transition-colors" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+                      AITRANSVOICE
+                    </h3>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      El poder de la voz natural y la traducción instantánea de manuscritos o guiones. Clona tu propio timbre vocal en 5 segundos, traduce borradores completos de audiolibros e inserta doblajes fluidos.
+                    </p>
+                  </div>
+
+                  <ul className="text-xs text-slate-350 space-y-2 pt-2">
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>Traductor y localizador vocal multi-idioma</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>Clonación de voz ética con muestra de 5 segundos</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>Conversor de Narrativas completas a Audio</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="pt-8">
+                  <button
+                    onClick={() => {
+                      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                        window.speechSynthesis.cancel();
+                      }
+                      setHubTab("aitransvoice");
+                    }}
+                    className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-black py-3.5 px-5 rounded-2xl text-xs sm:text-sm tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/10"
+                  >
+                    <span>Ingresar a AITRANSVOICE</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Product 3: MULTIPUBLISHER */}
+              <div className="bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-cyan-500/45 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-cyan-500/5 group relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-cyan-500/10 transition-colors"></div>
+
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400">
+                      <Share2 className="w-6 h-6" />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] uppercase font-mono font-bold bg-indigo-505/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded-full">
+                        Growth & Ads Matrix
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-xl sm:text-2xl font-black text-white group-hover:text-cyan-400 transition-colors" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+                      MULTIPUBLISHER
+                    </h3>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      El motor definitivo de visibilidad y difusión de cursos. Adapta tus copias previniendo filtros de spam, planifica estrategias Ads en Google, Meta o Amazon, y certifícate en la Academia.
+                    </p>
+                  </div>
+
+                  <ul className="text-xs text-slate-350 space-y-2 pt-2">
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-cyan-400 shrink-0" />
+                      <span>Multiplicador persuasivo anti-penalizaciones</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-cyan-400 shrink-0" />
+                      <span>Academia de Tráfico (Google, Meta, Amazon Learn, etc.)</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-cyan-400 shrink-0" />
+                      <span>Simulador proyectivo de clics y captación de alumnos</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="pt-8">
+                  <button
+                    onClick={() => {
+                      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                        window.speechSynthesis.cancel();
+                      }
+                      setHubTab("multipublisher");
+                    }}
+                    className="w-full bg-gradient-to-r from-emerald-500 via-cyan-400 to-indigo-500 hover:from-emerald-400 hover:via-cyan-300 hover:to-indigo-400 text-slate-950 font-black py-3.5 px-5 rounded-2xl text-xs sm:text-sm tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-cyan-500/10"
+                  >
+                    <span>Ingresar a MultiPublisher</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {/* ROADMAP SECTION: SOLIDIFYING THE CONSTANT EVOLUTION & ANCHORING FUTURE TOOLS */}
+            <section className="bg-slate-950/60 border border-slate-850 rounded-3xl p-6 sm:p-8 max-w-5xl mx-auto shadow-xl relative overflow-hidden">
+              <div className="absolute top-1/2 left-10 w-48 h-48 bg-purple-500/5 rounded-full blur-[80px] pointer-events-none"></div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+                <div className="lg:col-span-1 space-y-3 text-left">
+                  <div className="inline-flex items-center gap-1 bg-purple-500/10 border border-purple-500/20 px-2.5 py-1 rounded-md text-[10px] text-purple-400 font-bold font-mono tracking-wider uppercase">
+                    Ecosistema en Expansión
+                  </div>
+                  <h3 className="text-xl font-black text-white" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+                    Nuestra Visión Continua
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed font-sans">
+                    En Hostiasoft seguimos co-creando de la mano de nuestra comunidad de autores independientes. Periódicamente incorporamos nuevas utilidades al ecosistema para democratizar capacidades avanzadas.
+                  </p>
+                </div>
+
+                <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Future software card 1 */}
+                  <div className="bg-slate-900/40 border border-slate-800/80 p-4 rounded-2xl hover:border-purple-500/20 transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 text-purple-400 font-bold text-xs uppercase font-mono mb-2">
+                        <Cpu className="w-4 h-4" />
+                        <span>Core 3: AI OrtoTipográfica</span>
+                      </div>
+                      <p className="text-[11px] text-slate-300 leading-relaxed">
+                        Evaluación automatizada de la rítmica textual, balance silábico de márgenes, y corrector ortotipográfico inteligente para purificación de borradores.
+                      </p>
+                    </div>
+                    <div className="text-[9px] text-purple-400/80 font-mono font-bold mt-4">
+                      ⏳ Próxima Integración
+                    </div>
+                  </div>
+
+                  {/* Future software card 2 */}
+                  <div className="bg-slate-900/40 border border-slate-800/80 p-4 rounded-2xl hover:border-purple-500/20 transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 text-purple-400 font-bold text-xs uppercase font-mono mb-2">
+                        <TrendingUp className="w-4 h-4" />
+                        <span>Core 4: Hostia Store</span>
+                      </div>
+                      <p className="text-[11px] text-slate-300 leading-relaxed">
+                        Canal autónomo, soberano y directo para preventas y venta descentralizada de tus ePubs y Audiolibros, reteniendo el 100% de tus regalías de autor.
+                      </p>
+                    </div>
+                    <div className="text-[9px] text-purple-400/80 font-mono font-bold mt-4">
+                      ⏳ En Desarrollo Activo
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        ) : hubTab === "aitransvoice" ? (
           <div className="space-y-24 animate-fadeIn">
             {/* AITRANSVOICE HERO - POWERED BY HOSTIA SOFT */}
             <section className="text-center max-w-4xl mx-auto flex flex-col items-center space-y-6 pt-8">
@@ -1134,7 +1453,7 @@ export function LandingPage({
                         <Activity className="w-4 h-4 text-indigo-400" /> Idioma de Destino
                       </span>
                       <div className="flex gap-1.5 bg-slate-950 border border-slate-800 p-1 rounded-xl">
-                        {(["es", "en", "pt"] as const).map((lang) => (
+                        {(["es", "en", "pt", "fr", "it", "de"] as const).map((lang) => (
                           <button
                             key={lang}
                             type="button"
@@ -1198,10 +1517,20 @@ export function LandingPage({
                       <button
                         type="button"
                         onClick={handleTranslateText}
-                        className="flex-1 bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-slate-200 text-xs py-3.5 px-4 rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer transition-all uppercase tracking-wider font-mono"
+                        disabled={isTranslating}
+                        className="flex-1 bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-slate-200 text-xs py-3.5 px-4 rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer transition-all uppercase tracking-wider font-mono disabled:opacity-50"
                       >
-                        <Languages className="w-4 h-4 text-emerald-400" />
-                        <span>Traducir con IA</span>
+                        {isTranslating ? (
+                          <>
+                            <span className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin shrink-0"></span>
+                            <span>Traduciendo...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Languages className="w-4 h-4 text-emerald-400" />
+                            <span>Traducir con IA</span>
+                          </>
+                        )}
                       </button>
 
                       <button
@@ -1497,7 +1826,7 @@ export function LandingPage({
                     <div className="grid grid-cols-2 gap-2 text-center">
                       <button
                         type="button"
-                        onClick={() => alert("Simulación: Descarga de archivo MP3 Master del capítulo 1 iniciada de forma segura.")}
+                        onClick={() => showToast("Simulación: Descarga de archivo MP3 Master del capítulo 1 iniciada de forma segura.", "success")}
                         disabled={audiobookStatus !== "ready"}
                         className="bg-slate-900 hover:bg-slate-850 border border-slate-855 text-slate-300 font-bold p-3 rounded-xl text-xs uppercase cursor-pointer disabled:opacity-40 transition-all"
                       >
@@ -1505,7 +1834,7 @@ export function LandingPage({
                       </button>
                       <button
                         type="button"
-                        onClick={() => alert("Simulación: Paquete completo de distribución M4B para Apple Audiobooks generado.")}
+                        onClick={() => showToast("Simulación: Paquete completo de distribución M4B para Apple Audiobooks generado.", "success")}
                         disabled={audiobookStatus !== "ready"}
                         className="bg-slate-900 hover:bg-slate-850 border border-slate-855 text-slate-300 font-bold p-3 rounded-xl text-xs uppercase cursor-pointer disabled:opacity-40 transition-all"
                       >
@@ -1635,6 +1964,11 @@ export function LandingPage({
               </div>
             </section>
           </div>
+        ) : hubTab === "multipublisher" ? (
+          <MultiPublisher
+            language={language}
+            showToast={showToast}
+          />
         ) : (
           <>
             {/* HERO SECTION - POWERED BY HOSTIA SOFT */}
@@ -3447,6 +3781,39 @@ export function LandingPage({
               </form>
             )}
           </div>
+        </div>
+      )}
+
+      {/* BEAUTIFUL CUSTOM PREMIUM TOAST NOTIFICATION CONTAINER */}
+      {toastMessage && (
+        <div 
+          id="custom-toast-notification"
+          className="fixed bottom-5 right-5 z-[500] max-w-sm p-4 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex items-start gap-3 animate-fadeIn"
+          style={{ boxShadow: "0 20px 40px -15px rgba(0,0,0,0.8)" }}
+        >
+          <div className="mt-0.5 shrink-0">
+            {toastType === "success" ? (
+              <span className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-400 flex items-center justify-center font-bold text-xs">✓</span>
+            ) : toastType === "warning" ? (
+              <span className="w-5 h-5 rounded-full bg-rose-500/15 text-rose-400 flex items-center justify-center font-bold text-xs font-mono">!</span>
+            ) : (
+              <span className="w-5 h-5 rounded-full bg-indigo-500/15 text-indigo-400 flex items-center justify-center font-bold text-xs font-mono">i</span>
+            )}
+          </div>
+          <div className="space-y-1 overflow-hidden">
+            <span className="text-[10px] uppercase font-mono tracking-wider font-extrabold text-slate-400">
+              {toastType === "success" ? "Operación Exitosa" : toastType === "warning" ? "Advertencia" : "Info HostiaSoft"}
+            </span>
+            <p className="text-xs text-slate-300 leading-relaxed font-medium break-words">
+              {toastMessage}
+            </p>
+          </div>
+          <button 
+            onClick={() => setToastMessage(null)}
+            className="text-slate-500 hover:text-white font-black text-xs px-1 cursor-pointer bg-transparent border-0 self-start"
+          >
+            ×
+          </button>
         </div>
       )}
     </div>

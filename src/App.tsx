@@ -272,13 +272,22 @@ export default function App() {
   // --- STATE ---
   const [language, setLanguage] = useState<SupportedLanguages>("es");
 
+  // Custom non-blocking HUD Toast / Alert states for sandboxed iframe
+  const [studioToast, setStudioToast] = useState<{ message: string; type: "success" | "info" | "warning" } | null>(null);
+
+  const triggerStudioToast = (message: string, type: "success" | "info" | "warning" = "info") => {
+    setStudioToast({ message, type });
+    setTimeout(() => {
+      setStudioToast((curr) => curr?.message === message ? null : curr);
+    }, 4500);
+  };
+
   useEffect(() => {
     try {
       const browserLanguage = navigator.language || (navigator as any).userLanguage || "es";
-      if (browserLanguage.toLowerCase().startsWith("pt")) {
-        setLanguage("pt");
-      } else if (browserLanguage.toLowerCase().startsWith("en")) {
-        setLanguage("en");
+      const code = browserLanguage.toLowerCase().substring(0, 2);
+      if (["es", "en", "pt", "fr", "it", "de"].includes(code)) {
+        setLanguage(code as SupportedLanguages);
       } else {
         setLanguage("es");
       }
@@ -508,17 +517,54 @@ export default function App() {
   const [showDonationPromptModal, setShowDonationPromptModal] = useState<boolean>(false);
   const [pendingDownload, setPendingDownload] = useState<{ content: string; filename: string; mimeType: string } | null>(null);
 
-  // --- DAGRAMITO ASSISTANT STATES ---
+  // --- GUIAUTOR UNIVERSAL ASSISTANT STATES ---
   const [isDagramitoOpen, setIsDagramitoOpen] = useState<boolean>(false);
   const [dagramitoHasUnread, setDagramitoHasUnread] = useState<boolean>(true); // Notification dot
-  const [dagramitoMessages, setDagramitoMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([
-    {
-      role: "assistant",
-      content: "¡Hola! 🦆 Soy **Dagramito**, tu agente editorial experto y mentor tipográfico de DIAGRAMMERS.\n\nMe alegra inmensamente ver lo profesional que está quedando tu manuscrito. Estoy aquí si no entiendes algo o tienes preguntas sobre cómo maquetar, ajustar sangrías, sangrados, ISBN o preparar tu obra para imprenta física o KDP.\n\nPrueba preguntándome:\n\n- **¿Dónde se ve el tamaño del libro impreso?**\n- **¿Cómo pongo bien los guiones de diálogos (rayas largas) en español?**\n- **¿Qué arquetipos o colores de papel tenemos?**"
-    }
-  ]);
+  const [dagramitoMessages, setDagramitoMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
   const [dagramitoInput, setDagramitoInput] = useState<string>("");
   const [dagramitoIsTyping, setDagramitoIsTyping] = useState<boolean>(false);
+
+  const [guiautorVoiceActive, setGuiautorVoiceActive] = useState<boolean>(false);
+  const voiceActiveRef = useRef<boolean>(false);
+  useEffect(() => {
+    voiceActiveRef.current = guiautorVoiceActive;
+  }, [guiautorVoiceActive]);
+
+  const speakHelper = (text: string) => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      // Stripping formatting tags for standard clean voice output
+      const cleanText = text
+        .replace(/[#*`_-]/g, " ")
+        .replace(/🧠|📘|🎙️|📦/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      let targetLang = "es-ES";
+      if (language === "en") targetLang = "en-US";
+      else if (language === "pt") targetLang = "pt-BR";
+      else if (language === "fr") targetLang = "fr-FR";
+      else if (language === "it") targetLang = "it-IT";
+      else if (language === "de") targetLang = "de-DE";
+      else targetLang = "es-ES";
+      
+      utterance.lang = targetLang;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  // Re-translate current greeting whenever selected language swaps if no user chat is active
+  useEffect(() => {
+    if (dagramitoMessages.length <= 1) {
+      setDagramitoMessages([
+        {
+          role: "assistant",
+          content: t.dagramitoGreeting || "🧠 ¡Hola! Soy Guiautor AI..."
+        }
+      ]);
+    }
+  }, [language]);
   
   // Prompt for style analysis AI
   const [stylePrompt, setStylePrompt] = useState("");
@@ -966,7 +1012,7 @@ export default function App() {
       });
 
       if (!res.ok) {
-        throw new Error("Dagramito se ha quedado pensando un poco de más. ¿Podrías reintentar?");
+        throw new Error("Guiautor AI se ha quedado pensando un poco de más. ¿Podrías reintentar?");
       }
 
       const data = await res.json();
@@ -974,16 +1020,31 @@ export default function App() {
         throw new Error(data.error);
       }
 
+      const replyText = data.text || "Lo siento, ¿podrías reformular la pregunta?";
       setDagramitoMessages(prev => [
         ...prev,
-        { role: "assistant" as const, content: data.text || "Lo siento, ¿podrías reformular la pregunta? Mi tintero se ha quedado seco por un momento." }
+        { role: "assistant" as const, content: replyText }
       ]);
+      
+      if (voiceActiveRef.current) {
+        speakHelper(replyText);
+      }
     } catch (err: any) {
       console.error(err);
+      const errorReply = language === "en" 
+        ? "🧠 *Connection issue!* Please retry in a few seconds." 
+        : language === "pt"
+        ? "🧠 *Falha na conexão!* Por favor, reconsulte em poucos segundos."
+        : "🧠 *¡Ups! Tuve un problema para conectarme.* Reintenta en unos segundos, por favor.";
+      
       setDagramitoMessages(prev => [
         ...prev,
-        { role: "assistant" as const, content: `🦆 *¡Cuaaac!* Tuve un problema para conectarme con mis apuntes editoriales. Reintenta en unos segundos, por favor.` }
+        { role: "assistant" as const, content: errorReply }
       ]);
+      
+      if (voiceActiveRef.current) {
+        speakHelper(errorReply);
+      }
     } finally {
       setDagramitoIsTyping(false);
     }
@@ -4255,7 +4316,7 @@ ${generatedScreenplayText}
           <div className="flex items-center gap-1 bg-slate-905 border border-slate-800 p-1 rounded-xl shrink-0 text-xs">
             <Globe className="w-3.5 h-3.5 text-slate-400 mx-1.5" />
             <span className="text-[10px] text-slate-500 font-bold uppercase mr-1">{t.selectLanguageShort}:</span>
-            {(["es", "en", "pt"] as const).map((lang) => (
+            {(["es", "en", "pt", "fr", "it", "de"] as const).map((lang) => (
               <button
                 key={lang}
                 onClick={() => setLanguage(lang)}
@@ -7099,69 +7160,108 @@ ${generatedScreenplayText}
                   </div>
 
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Nuestras pasarelas automatizadas via REST API estructuran tu manuscrito encriptándolo militarmente en el origen (DIAGRAMMERS local) y empujándolo hacia tus perfiles corporativos sin intervención de terceros para salvaguardar tu absoluta confidencialidad.
+                    Nuestras pasarelas automatizadas estructuran tu manuscrito y facilitan su preparación. Para tu máxima seguridad y cumplimiento legal, todas las gestiones de derechos de autor y publicación oficial deben tramitarse directamente en tus perfiles personales de autor en las plataformas oficiales correspondientes.
                   </p>
+
+                  {/* HIGHLY CRITICAL WARNING ON ISBN & SAFE CREATIVE LEGAL POLICY */}
+                  <div className="bg-amber-500/10 border border-amber-500/35 rounded-xl p-4 space-y-2 font-mono">
+                    <h5 className="text-[11px] font-black text-amber-450 uppercase tracking-widest flex items-center gap-2">
+                      ⚠️ DIRECTRICES IMPORTANTES DE AUTOR (ISBN Y DERECHOS)
+                    </h5>
+                    <p className="text-[10.5px] text-slate-300 leading-relaxed font-sans">
+                      <strong>Regla de Oro de KDP:</strong> Si utilizas el ISBN gratuito provisto por Amazon KDP en tu cuenta de autor, recuerda que este código está <u>legalmente restringido en exclusiva</u> a la distribución en Amazon. <strong>Bajo ninguna circunstancia debes utilizar ese mismo ISBN en otros editores independientes</strong>, plataformas o imprentas ajenas, pues viola los términos de servicio internacionales. 
+                    </p>
+                    <p className="text-[10.5px] text-slate-300 leading-relaxed font-sans pt-1">
+                      Para garantizar la titularidad y total libertad comercial de tu libro, te facilitamos accesos directos seguros para que gestiones tus cuentas oficiales de forma personal y realices allí los trámites definitivos con total soberanía intelectual.
+                    </p>
+                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
                     
                     {/* Safe Creative Webhook Launcher */}
                     <div className="p-4 bg-slate-950 border border-slate-850 rounded-xl space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-300">Sincronización Safe Creative (REST API)</span>
+                        <span className="text-xs font-bold text-slate-300 font-mono">Sincronización Safe Creative (REST API)</span>
                         <span className={`text-[9px] px-2 py-0.5 rounded font-mono font-bold ${metadata.safeCreativeId ? "bg-indigo-500/10 text-indigo-400" : "bg-slate-800 text-slate-500"}`}>
                           {metadata.safeCreativeId ? "Listo para enviar" : "Requiere ID"}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
                         Envía de forma segura el hash criptográfico local y el archivo compilado directamente al registro internacional Safe Creative usando el estricto protocolo legal.
                       </p>
-                      <button
-                        onClick={handleTransferToSafeCreative}
-                        disabled={!metadata.safeCreativeId || isTransferringSafe}
-                        className={`w-full text-xs font-bold py-2 px-3 rounded-lg border transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                          !metadata.safeCreativeId 
-                            ? "bg-slate-900 border-slate-850 text-slate-600 cursor-not-allowed" 
-                            : isTransferringSafe 
-                            ? "bg-indigo-950 border-indigo-800 text-indigo-300 animate-pulse"
-                            : "bg-indigo-950 hover:bg-indigo-900 border-indigo-500/30 text-indigo-300"
-                        }`}
-                      >
-                        <ShieldCheck className="w-4 h-4 shrink-0" />
-                        <span>
-                          {isTransferringSafe && transferState === "sending" ? "Traspasando Encriptado..." : 
-                           isTransferringSafe && transferState === "success" ? "✓ Traspaso Exitoso" :
-                           "Transferir por API Segura a Safe Creative"}
-                        </span>
-                      </button>
+                      
+                      <div className="flex flex-col gap-2 pt-1">
+                        <button
+                          onClick={handleTransferToSafeCreative}
+                          disabled={!metadata.safeCreativeId || isTransferringSafe}
+                          className={`w-full text-xs font-bold py-2 px-3 rounded-lg border transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                            !metadata.safeCreativeId 
+                              ? "bg-slate-900 border-slate-850 text-slate-600 cursor-not-allowed" 
+                              : isTransferringSafe 
+                              ? "bg-indigo-950 border-indigo-800 text-indigo-300 animate-pulse"
+                              : "bg-indigo-950 hover:bg-indigo-900 border-indigo-500/30 text-indigo-300"
+                          }`}
+                        >
+                          <ShieldCheck className="w-4 h-4 shrink-0" />
+                          <span>
+                            {isTransferringSafe && transferState === "sending" ? "Traspasando Encriptado..." : 
+                             isTransferringSafe && transferState === "success" ? "✓ Traspaso Exitoso" :
+                             "Transferir por API a Safe Creative"}
+                          </span>
+                        </button>
+
+                        <a 
+                          href="https://www.safecreative.org" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="w-full text-center text-[10px] font-bold py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 rounded-lg transition-colors flex items-center justify-center gap-1.5 focus:outline-none"
+                        >
+                          <span>Ir al Portal Oficial de Safe Creative</span>
+                          <span className="text-slate-500">↗</span>
+                        </a>
+                      </div>
                     </div>
 
                     {/* Amazon KDP Webhook Launcher */}
                     <div className="p-4 bg-slate-950 border border-slate-850 rounded-xl space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-300">Autotransferencia Amazon KDP (Portal Segura)</span>
+                        <span className="text-xs font-bold text-slate-300 font-mono">Autotransferencia Amazon KDP (Portal Seguro)</span>
                         <span className="text-[9px] bg-slate-800 text-slate-500 px-2 py-0.5 rounded font-mono font-bold">
                           API Activa
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
                         Exporta tus metadatos compaginados, tu ISBN técnico y el cuerpo del libro estructurado directamente a tu biblioteca de borradores en Amazon Kindle Direct Publishing.
                       </p>
-                      <button
-                        onClick={handleTransferToKDP}
-                        disabled={isTransferringKDP}
-                        className={`w-full text-xs font-bold py-2 px-3 rounded-lg border transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                          isTransferringKDP 
-                            ? "bg-emerald-950 border-emerald-800 text-emerald-300 animate-pulse"
-                            : "bg-emerald-950 hover:bg-emerald-900 border-emerald-500/30 text-emerald-300"
-                        }`}
-                      >
-                        <FileDown className="w-4 h-4 shrink-0" />
-                        <span>
-                          {isTransferringKDP && transferState === "sending" ? "Subiendo Borrador KDP..." : 
-                           isTransferringKDP && transferState === "success" ? "✓ Traspaso Exitoso" :
-                           "Iniciar Transmisión Segura a Amazon KDP"}
-                        </span>
-                      </button>
+
+                      <div className="flex flex-col gap-2 pt-1">
+                        <button
+                          onClick={handleTransferToKDP}
+                          disabled={isTransferringKDP}
+                          className={`w-full text-xs font-bold py-2 px-3 rounded-lg border transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                            isTransferringKDP 
+                              ? "bg-emerald-950 border-emerald-800 text-emerald-300 animate-pulse"
+                              : "bg-emerald-950 hover:bg-emerald-900 border-emerald-500/30 text-emerald-300"
+                          }`}
+                        >
+                          <FileDown className="w-4 h-4 shrink-0" />
+                          <span>
+                            {isTransferringKDP && transferState === "sending" ? "Subiendo Borrador KDP..." : 
+                             isTransferringKDP && transferState === "success" ? "✓ Traspaso Exitoso" :
+                             "Iniciar Transmisión a Amazon KDP"}
+                          </span>
+                        </button>
+
+                        <a 
+                          href="https://kdp.amazon.com" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="w-full text-center text-[10px] font-bold py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 rounded-lg transition-colors flex items-center justify-center gap-1.5 focus:outline-none"
+                        >
+                          <span>Ir a mi Portal de Autor en Amazon KDP</span>
+                          <span className="text-slate-500">↗</span>
+                        </a>
+                      </div>
                     </div>
 
                   </div>
@@ -10542,9 +10642,7 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
           </div>
         </div>
       )}
-
-      {/* ======================================================== */}
-      {/* --- DAGRAMITO CHAT FLOATING ASSISTANT WIDGET --- */}
+      {/* --- GUIAUTOR AI FLOATING ASSISTANT WIDGET --- */}
       {/* ======================================================== */}
       <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3 font-sans">
         
@@ -10556,27 +10654,63 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
             <div className="bg-slate-950 border-b border-slate-800/60 p-3.5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-tr from-amber-500 to-amber-600 rounded-xl flex items-center justify-center text-xl shadow-inner select-none relative">
-                  🦆
+                  🧠
                   <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border border-slate-950" />
                 </div>
                 <div className="text-left">
                   <h4 className="font-bold text-slate-100 text-xs tracking-wide flex items-center gap-1.5 uppercase font-mono">
-                    Dagramito <span className="text-[8px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded-full border border-amber-500/20 font-black">EDITORES</span>
+                    Guiautor AI <span className="text-[8px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded-full border border-amber-500/20 font-black">COMENTOR</span>
                   </h4>
-                  <p className="text-[10px] text-slate-400 font-mono">¡Tu agente y mentor editorial experto!</p>
+                  <p className="text-[9px] text-slate-400 font-mono">
+                    {language === "en" ? "Your multi-channel AI expert guide!" :
+                     language === "pt" ? "Seu mentor IA multicanal!" :
+                     language === "fr" ? "Votre mentor IA multi-canal!" :
+                     language === "it" ? "Il tuo assistente IA multicanale!" :
+                     language === "de" ? "Ihr Multikanal-KI-Mentor!" :
+                     "¡Tu mentor IA multicanal paso a paso!"}
+                  </p>
                 </div>
               </div>
               
               {/* Header Controls */}
               <div className="flex items-center gap-1.5">
+                {/* Voice Toggle */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextVal = !guiautorVoiceActive;
+                    setGuiautorVoiceActive(nextVal);
+                    if (nextVal) {
+                      const feedback = language === "en" ? "Voice guidance activated." :
+                                       language === "pt" ? "Guia por voz ativado." :
+                                       language === "fr" ? "Guidage vocal activé." :
+                                       language === "it" ? "Guida vocale attivata." :
+                                       language === "de" ? "Sprachführung aktiviert." :
+                                       "Guía por voz activa de Guiautor habilitada.";
+                      speakHelper(feedback);
+                    } else {
+                      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                        window.speechSynthesis.cancel();
+                      }
+                    }
+                  }}
+                  title={guiautorVoiceActive ? "Silenciar lector por voz" : "Escuchar respuestas automáticamente"}
+                  className={`p-1.5 rounded-lg cursor-pointer transition-colors ${guiautorVoiceActive ? "bg-amber-500/20 text-amber-400 border border-amber-550/30" : "hover:bg-slate-800/80 text-slate-500 hover:text-slate-350"}`}
+                >
+                  <Volume2 className="w-3.5 h-3.5" />
+                </button>
+
                 {/* Reset History Icon button */}
                 <button
                   onClick={() => {
-                    if (window.confirm("¿Seguro que deseas reiniciar tu diálogo tipográfico con Dagramito?")) {
+                    const confirmMsg = language === "en" ? "Restart conversation history with Guiautor AI?" :
+                                     language === "pt" ? "Reiniciar histórico com Guiautor AI?" :
+                                     "¿Seguro que deseas reiniciar tu diálogo literario con Guiautor AI?";
+                    if (window.confirm(confirmMsg)) {
                       setDagramitoMessages([
                         {
                           role: "assistant",
-                          content: "¡Listo! Corregido mi escritorio y sacudidas las plumas. ¿En qué puedo aconsejarte ahora o qué duda tienes sobre tu maquetación?"
+                          content: t.dagramitoGreeting || "🧠 Ready! How can I tutor you now?"
                         }
                       ]);
                     }
@@ -10603,8 +10737,18 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                 <main key={idx} className={`flex gap-2 max-w-[88%] ${msg.role === "user" ? "self-end justify-end flex-row-reverse" : "self-start text-left"}`}>
                   
                   {msg.role === "assistant" && (
-                    <div className="w-7 h-7 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-center text-sm shrink-0 self-start select-none">
-                      🦆
+                    <div className="flex flex-col items-center gap-1.5 shrink-0 self-start">
+                      <div className="w-7 h-7 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-center text-sm select-none">
+                        🧠
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => speakHelper(msg.content)}
+                        className="p-1 hover:bg-slate-800 hover:text-amber-400 text-slate-500 rounded transition-colors cursor-pointer"
+                        title="Escuchar este mensaje"
+                      >
+                        <Volume2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   )}
 
@@ -10626,7 +10770,7 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
               {dagramitoIsTyping && (
                 <div className="flex gap-2 text-left self-start max-w-[85%]">
                   <div className="w-7 h-7 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-center text-sm shrink-0 select-none animate-pulse">
-                    🦆
+                    🧠
                   </div>
                   <div className="bg-slate-800/40 border border-slate-800 text-slate-400 py-2.5 px-3.5 rounded-2xl rounded-tl-none text-xs flex items-center gap-1.5 italic font-mono">
                     <span className="flex gap-1 shrink-0">
@@ -10634,7 +10778,14 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                       <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></span>
                       <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></span>
                     </span>
-                    <span>Dagramito hojea apuntes...</span>
+                    <span>
+                      {language === "en" ? "Guiautor AI is searching sources..." :
+                       language === "pt" ? "Guiautor AI está buscando anotações..." :
+                       language === "fr" ? "Guiautor AI cherche des notes..." :
+                       language === "it" ? "Guiautor AI sta leggendo gli appunti..." :
+                       language === "de" ? "Guiautor AI sucht Notizen..." :
+                       "Guiautor AI está ordenando ideas neuronales..."}
+                    </span>
                   </div>
                 </div>
               )}
@@ -10645,15 +10796,40 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
 
             {/* Recommended quick clicks area */}
             <div className="bg-slate-950/80 px-3.5 py-2 border-t border-slate-850/40 text-left">
-              <p className="text-[8.5px] uppercase font-bold text-slate-500 tracking-wider mb-1.5 font-mono">Preguntas frecuentes sugeridas:</p>
+              <p className="text-[8.5px] uppercase font-bold text-slate-500 tracking-wider mb-1.5 font-mono">
+                {language === "en" ? "RECOMMENDED FREQUENT QUESTIONS:" :
+                 language === "pt" ? "PERGUNTAS FREQUENTES RECOMENDADAS:" :
+                 "PREGUNTAS FRECUENTES SUGERIDAS:"}
+              </p>
               <div className="flex flex-wrap gap-1 md:gap-1.5 max-h-[85px] overflow-y-auto custom-scrollbar">
-                {[
+                {(language === "en" ? [
+                  { text: "Where is the trim paper size?", icon: "📏" },
+                  { text: "How do I edit custom chapters?", icon: "✍️" },
+                  { text: "What paper styles are available?", icon: "🎨" }
+                ] : language === "pt" ? [
+                  { text: "Onde mudo os tamanhos de impressão?", icon: "📏" },
+                  { text: "Como usar regras ortotipográficas?", icon: "✍️" },
+                  { text: "Quais são as cores de papel?", icon: "🎨" }
+                ] : language === "fr" ? [
+                  { text: "Où est le format du livre ?", icon: "📏" },
+                  { text: "Comment éditer des chapitres ?", icon: "✍️" },
+                  { text: "Quels types de papier offre-t-on ?", icon: "🎨" }
+                ] : language === "it" ? [
+                  { text: "Dove trovo la misura del libro ?", icon: "📏" },
+                  { text: "Come correggo la punteggiatura ?", icon: "✍️" },
+                  { text: "Quali stili di carta ci sono ?", icon: "🎨" }
+                ] : language === "de" ? [
+                  { text: "Wo ist das Druckformat ?", icon: "📏" },
+                  { text: "Wie bearbeite ich Kapitel ?", icon: "✍️" },
+                  { text: "Welche Papierfarben gibt es ?", icon: "🎨" }
+                ] : [
                   { text: "¿Dónde está el tamaño de impresión?", icon: "📏" },
-                  { text: "¿Cómo corrijo los diálogos en español (—)?", icon: "✍️" },
+                  { text: "¿Cómo pongo bien las rayas de diálogo (—)?", icon: "✍️" },
                   { text: "¿Qué arquetipos estéticos ofreces?", icon: "🎨" }
-                ].map((pill, id) => (
+                ]).map((pill, id) => (
                   <button
                     key={id}
+                    type="button"
                     onClick={() => sendDagramitoQuery(pill.text)}
                     disabled={dagramitoIsTyping}
                     className="bg-slate-900 hover:bg-slate-800 disabled:opacity-40 border border-slate-800/70 hover:border-slate-700 text-slate-350 hover:text-white px-2.5 py-1 rounded-full text-[10px] cursor-pointer transition-colors text-left flex items-center gap-1 font-mono"
@@ -10676,7 +10852,11 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                 type="text"
                 value={dagramitoInput}
                 onChange={(e) => setDagramitoInput(e.target.value)}
-                placeholder="Consúltame sobre imprenta, RAE, KDP..."
+                placeholder={
+                  language === "en" ? "Ask me about RAE, digital publishing, multi-channel..." :
+                  language === "pt" ? "Pergunte sobre RAE, publicação, canais digitais..." :
+                  "Consúltame sobre imprenta, RAE, KDP, HostiaSoft..."
+                }
                 disabled={dagramitoIsTyping}
                 className="flex-1 min-w-0 bg-slate-900 border border-slate-800 focus:border-amber-500/50 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/30"
               />
@@ -10698,7 +10878,11 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
           {!isDagramitoOpen && dagramitoHasUnread && (
             <div className="absolute right-16 top-1 bg-gradient-to-r from-slate-950 to-slate-900 border border-slate-800 text-slate-200 px-3 py-2 rounded-xl shadow-2xl text-[10.5px] whitespace-nowrap animate-bounce flex items-center gap-2 font-mono">
               <span className="w-2 h-2 bg-amber-500 rounded-full animate-ping shrink-0" />
-              <span>¿Necesitas ayuda? ¡Consúltame! <strong>🦆</strong></span>
+              <span>
+                {language === "en" ? <>Need advice? <strong>Guiautor AI</strong> is here! 🧠</> :
+                 language === "pt" ? <>Precisa de ajuda? <strong>Guiautor AI</strong> responde! 🧠</> :
+                 <>¿Necesitas ayuda paso a paso? ¡Consúltame! <strong>🧠</strong></>}
+              </span>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -10717,7 +10901,7 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
               setIsDagramitoOpen(prev => !prev);
               setDagramitoHasUnread(false); // Clear notification indicator once opened
             }}
-            title={isDagramitoOpen ? "Cerrar asistente" : "Consultar a Dagramito"}
+            title={isDagramitoOpen ? "Cerrar asistente" : "Consultar a Guiautor AI"}
             className="w-14 h-14 bg-gradient-to-tr from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 rounded-xl flex items-center justify-center shadow-2xl cursor-pointer transition-all hover:scale-105 active:scale-95 border border-slate-900 select-none"
           >
             {isDagramitoOpen ? (
@@ -10727,6 +10911,36 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
             )}
           </button>
         </div>
+
+        {/* DIAGRAMMERS Studio Wide Toast Messages */}
+        {studioToast && (
+          <div className="fixed bottom-24 right-6 z-[9999] max-w-sm w-full bg-slate-950/95 border border-slate-800 rounded-xl p-4 shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-5 duration-300">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 p-1 rounded-lg bg-slate-900 border border-slate-800">
+                {studioToast.type === "success" ? (
+                  <span className="text-emerald-400 font-bold font-mono">✓</span>
+                ) : studioToast.type === "warning" ? (
+                  <span className="text-amber-500 font-bold font-mono">⚠️</span>
+                ) : (
+                  <span className="text-indigo-400 font-bold font-mono">ℹ</span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="block text-xs font-medium text-slate-300 font-mono">
+                  {studioToast.type === "success" ? "ÉXITO" : studioToast.type === "warning" ? "ATENCIÓN" : "SISTEMA HUD"}
+                </span>
+                <p className="mt-1 text-xs text-slate-400 leading-relaxed font-sans">{studioToast.message}</p>
+              </div>
+              <button
+                onClick={() => setStudioToast(null)}
+                className="text-slate-500 hover:text-slate-300 cursor-pointer transition-colors"
+                title="Cerrar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
       </div>
 

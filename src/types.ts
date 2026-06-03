@@ -189,3 +189,41 @@ export const ARCHETYPES: Record<string, BookStyleSettings> = {
     fontSizeTitle: "medium"
   }
 };
+
+// --- MULTI-PUBLISHER SOCIAL GROWTH INTERFACES ---
+export interface GroupTarget {
+  id: string;
+  name: string;
+  url: string;
+  active: boolean;
+}
+
+export interface PlatformConfig {
+  code: string;
+  name: string;
+  enabled: boolean;
+  colorClass: string;
+  defaultGroups: { name: string; url: string }[];
+}
+
+export interface GroupCampaignCopy {
+  groupId: string;
+  groupName: string;
+  uniqueCopy: string;
+  shortUrl?: string;
+  isPosted?: boolean;
+}
+
+export interface MultiPublisherCampaign {
+  id: string;
+  title: string;
+  originalBrief: string;
+  niche: string;
+  mediaStyle: string;
+  createdAt: string;
+  copiesByPlatform: Record<string, GroupCampaignCopy[]>;
+  mediaPrompt?: string;
+  suggestedMime?: string;
+  generatedArtUrl?: string;
+}
+

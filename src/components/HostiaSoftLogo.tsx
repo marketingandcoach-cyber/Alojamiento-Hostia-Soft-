@@ -169,21 +169,38 @@ export function HostiaSoftLogo({ className = "w-16 h-16", glow = true }: HostiaS
           fill="#ffffff" 
         />
 
-        {/* 4. Central Majestic Metallic 3D-styled H (Left and Right pillars with central splits) */}
+        {/* 4. Central Majestic Metallic 3D-styled H (Symmetric columns with a sleek connecting crossbar) */}
         {/* Left Column of H */}
         <path 
-          d="M 33,22 L 44,22 L 44,45 L 48,46 L 48,54 L 44,55 L 44,77 L 33,77 L 37,50 Z" 
+          d="M 33,22 L 44,22 L 44,45 L 48,46 L 48,54 L 44,55 L 44,78 L 33,78 L 36,50 Z" 
           fill="url(#metallic-h-grad)" 
           stroke="#475569" 
-          strokeWidth="0.4"
+          strokeWidth="0.5"
         />
 
         {/* Right Column of H */}
         <path 
-          d="M 67,23 L 56,23 L 56,45 L 52,46 L 52,54 L 56,55 L 56,77 L 67,77 L 63,50 Z" 
+          d="M 67,22 L 56,22 L 56,45 L 52,46 L 52,54 L 56,55 L 56,78 L 67,78 L 64,50 Z" 
           fill="url(#metallic-h-grad)" 
           stroke="#475569" 
-          strokeWidth="0.4"
+          strokeWidth="0.5"
+        />
+
+        {/* Cybernetic Connecting Bridge of the H */}
+        <path 
+          d="M 44,47 L 56,47 L 56,53 L 44,53 Z" 
+          fill="url(#metallic-h-grad)" 
+          stroke="#475569" 
+          strokeWidth="0.5"
+        />
+
+        {/* Cyber energetic core orb in the center of H */}
+        <circle 
+          cx="50" 
+          cy="50" 
+          r="3" 
+          fill="#38bdf8" 
+          filter="url(#cyan-glow)" 
         />
 
         {/* 5. Central Vertical Laser Splitting Flare Beam */}
