@@ -848,6 +848,103 @@ app.post("/api/download", (req, res) => {
   res.send(content);
 });
 
+// 5.5 TEXT CORRECTOR AND LITERARY MAGIC ENDPOINT
+app.post("/api/correct-and-magic", async (req, res) => {
+  const { text, language } = req.body;
+
+  if (!text || text.trim() === "") {
+    return res.json({ corrections: [], magicSuggestions: [] });
+  }
+
+  try {
+    const ai = getAI();
+    const systemPrompt = `
+Eres un corrector literario de la Real Academia Española (RAE) y un mentor de narrativa y maquetación de Hostiasoft.
+Tu tarea es analizar un texto proporcionado por un autor y devolver un análisis estructurado dividido estrictamente en dos partes:
+
+1) "corrections" (Errores técnicos, ortográficos y tipográficos):
+   - Revisa ortografía general, acentuación faltante o errónea, y comas fuera de lugar.
+   - Detecta el uso erróneo de guiones normales ("-") en vez de rayas de diálogo españolas ("—") pegadas al texto.
+   - Identifica omisiones de signos de apertura bilaterales (¿, ¡), que son fundamentales en español.
+   
+2) "magicSuggestions" (Sección "Magia" de sugerencias de estilo, redundancia y coherencia):
+   - Localiza palabras que se repitan demasiado cerca (redundancias que estropean la atmósfera literaria como "entonces", "después", "hacer", "decir" o palabras del contexto) y ofrece sinónimos o giros más ricos de vocabulario.
+   - Diagnostica narrativa sin coherencia, ideas inconexas, falta de fluidez o frases toscas y ofrece una propuesta pulida y poética que mantenga la esencia original del autor.
+
+Responde estrictamente en formato JSON válido de acuerdo al siguiente esquema:
+{
+  "corrections": [
+    {
+      "original": "segmento exacto de texto original",
+      "replacement": "segmento corregido para sustituir",
+      "reason": "Explicación directa, didáctica y constructiva del cambio",
+      "type": "spelling" | "grammar" | "rae-dashes" | "accent"
+    }
+  ],
+  "magicSuggestions": [
+    {
+      "original": "frase u oración exacta de texto original",
+      "replacement": "redacción alternativa optimizada",
+      "reason": "Explicación de por qué esta sugerencia mejora el ritmo, evita repeticiones o aporta magia literaria",
+      "type": "repetitive" | "coherence" | "flow" | "vocabulary"
+    }
+  ]
+}
+
+Reglas críticas:
+- Cada campo "original" DEBE ser una subcadena exacta del texto que ingresó el usuario para que la app pueda realizar reemplazos interactivos sin romper la estructura.
+- Si el texto está escrito en otro idioma (en, pt, des, fr, it), adáptate de inmediato pero redacta tus explicaciones amablemente de forma comprensible para el usuario.
+`;
+
+    const response = await generateContentWithRetry({
+      model: "gemini-3.5-flash",
+      contents: `Analiza el fragmento literario del usuario para extraer correcciones de texto y sugerencias mágicas:\n\n${text}`,
+      config: {
+        systemInstruction: systemPrompt,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          required: ["corrections", "magicSuggestions"],
+          properties: {
+            corrections: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                required: ["original", "replacement", "reason", "type"],
+                properties: {
+                  original: { type: Type.STRING },
+                  replacement: { type: Type.STRING },
+                  reason: { type: Type.STRING },
+                  type: { type: Type.STRING, enum: ["spelling", "grammar", "rae-dashes", "accent"] }
+                }
+              }
+            },
+            magicSuggestions: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                required: ["original", "replacement", "reason", "type"],
+                properties: {
+                  original: { type: Type.STRING },
+                  replacement: { type: Type.STRING },
+                  reason: { type: Type.STRING },
+                  type: { type: Type.STRING, enum: ["repetitive", "coherence", "flow", "vocabulary"] }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const parsedData = JSON.parse(response.text || '{"corrections": [], "magicSuggestions": []}');
+    res.json(parsedData);
+  } catch (error: any) {
+    console.error("Error analyzing correct-and-magic:", error);
+    res.json({ corrections: [], magicSuggestions: [] });
+  }
+});
+
 // 6. DAGRAMITO CHAT ENDPOINT: Friendly expert editorial bot assisting with layout, RAE, and typography
 app.post("/api/dagramito-chat", async (req, res) => {
   const { messages, prompt } = req.body;

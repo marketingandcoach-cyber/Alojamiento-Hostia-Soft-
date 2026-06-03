@@ -688,6 +688,69 @@ export default function App() {
   const [chapterHistory, setChapterHistory] = useState<Array<{ title: string; text: string }>>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
+  // --- TEXT CORRECTOR & LITERARY MAGIC STATES ---
+  const [isAnalyzingText, setIsAnalyzingText] = useState<boolean>(false);
+  const [textAnalysisResults, setTextAnalysisResults] = useState<{
+    corrections: Array<{ original: string; replacement: string; reason: string; type: string }>;
+    magicSuggestions: Array<{ original: string; replacement: string; reason: string; type: string }>;
+  } | null>(null);
+  const [activeAnalysisTab, setActiveAnalysisTab] = useState<"corrections" | "magic">("corrections");
+
+  useEffect(() => {
+    if (editingChapterIdx === null) {
+      setTextAnalysisResults(null);
+      setIsAnalyzingText(false);
+    }
+  }, [editingChapterIdx]);
+
+  const analyzeChapterText = async () => {
+    if (!editingChapterText || editingChapterText.trim() === "") {
+      triggerStudioToast("Escribe algo de texto en el capítulo para poder corregirlo.", "warning");
+      return;
+    }
+    setIsAnalyzingText(true);
+    try {
+      const response = await fetch("/api/correct-and-magic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: editingChapterText, language })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTextAnalysisResults(data);
+        triggerStudioToast("¡Análisis de corrección y magia completado!", "success");
+      } else {
+        triggerStudioToast("No se pudo obtener respuesta del corrector. Reintenta por favor.", "warning");
+      }
+    } catch (err) {
+      console.error(err);
+      triggerStudioToast("Error al conectar con el servidor de corrección.", "warning");
+    } finally {
+      setIsAnalyzingText(false);
+    }
+  };
+
+  const applyTextImprovement = (original: string, replacement: string) => {
+    if (!editingChapterText) return;
+    if (!editingChapterText.includes(original)) {
+      triggerStudioToast("No se ubica el texto original exacto en el capítulo. Es posible que lo hayas modificado.", "warning");
+      return;
+    }
+    const updatedText = editingChapterText.replace(original, replacement);
+    updateChapterTextWithHistory(updatedText);
+    triggerStudioToast("¡Cambio literario aplicado con éxito!", "success");
+
+    // Remove suggestions that refer to this match
+    if (textAnalysisResults) {
+      const filteredCorrections = textAnalysisResults.corrections.filter(item => item.original !== original);
+      const filteredMagic = textAnalysisResults.magicSuggestions.filter(item => item.original !== original);
+      setTextAnalysisResults({
+        corrections: filteredCorrections,
+        magicSuggestions: filteredMagic
+      });
+    }
+  };
+
   // --- PRINT WRAP COVER DESIGNER STATES ---
   const [coverPrompt, setCoverPrompt] = useState<string>("Paisaje cósmico celestial con estrellas doradas y una constelación estilizada sobre fondo oscuro elegante");
   const [coverArtUrl, setCoverArtUrl] = useState<string>("https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1200&auto=format&fit=crop");
@@ -8244,7 +8307,7 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
             {/* MANUSCRIPT INDIVIDUAL CHAPTER MODAL EDITOR */}
             {editingChapterIdx !== null && (
               <div id="chapter-editor-overlay" className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl flex flex-col max-h-[90vh]">
                   
                   {/* Modal Header */}
                   <div className="p-4 border-b border-slate-800 flex items-center justify-between">
@@ -8293,109 +8356,287 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                     </div>
                   </div>
 
-                  {/* Modal Inputs */}
-                  <div className="p-5 overflow-y-auto space-y-4 flex-1">
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-400 font-medium block">
-                        Título oficial del Capítulo:
-                      </label>
-                      <input
-                        type="text"
-                        value={editingChapterTitle}
-                        onChange={(e) => updateChapterTitleWithHistory(e.target.value)}
-                        className="w-full text-xs bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-100 focus:outline-none focus:border-amber-500 font-bold"
-                      />
-                    </div>
-
-                     <div className="space-y-1">
-                      <div className="flex items-center justify-between">
+                  {/* Modal Inputs and AI assistance tool dual panel */}
+                  <div className="p-5 overflow-y-auto flex-1 flex flex-col md:flex-row gap-5">
+                    
+                    {/* Left Column: Traditional Editor */}
+                    <div className="flex-1 md:w-3/5 space-y-4 flex flex-col">
+                      <div className="space-y-1">
                         <label className="text-xs text-slate-400 font-medium block">
-                          Párrafos literarios (los saltos de línea dobles generan nuevos párrafos para la compaginación):
+                          Título oficial del Capítulo:
                         </label>
-                        {speechSupported && (
-                          <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800/80 py-0.5 px-2 rounded-full">
-                            <label className="text-[9px] text-slate-500 font-mono">Idioma:</label>
-                            <select
-                              value={speechLang}
-                              onChange={(e) => {
-                                setSpeechLang(e.target.value);
-                                if (isDictating && dictationTarget === "chapter") {
-                                  stopDictation();
-                                }
-                              }}
-                              className="bg-transparent border-none text-[9.5px] text-slate-300 font-mono focus:outline-none cursor-pointer"
-                            >
-                              <option value="es-ES" className="bg-slate-900 pb-1">Español 🇪🇸</option>
-                              <option value="en-US" className="bg-slate-900 pb-1">English 🇺🇸</option>
-                              <option value="pt-PT" className="bg-slate-900 pb-1">Português 🇵🇹</option>
-                              <option value="fr-FR" className="bg-slate-900 pb-1">Français 🇫🇷</option>
-                              <option value="it-IT" className="bg-slate-900 pb-1">Italiano 🇮🇹</option>
-                            </select>
-                          </div>
-                        )}
+                        <input
+                          type="text"
+                          value={editingChapterTitle}
+                          onChange={(e) => updateChapterTitleWithHistory(e.target.value)}
+                          className="w-full text-xs bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-100 focus:outline-none focus:border-amber-500 font-bold"
+                        />
                       </div>
 
-                      {/* VOICE DICTATION CONTROLS BAR FOR MODAL EDITING */}
-                      {speechSupported && (
-                        <div className="bg-slate-950 border border-slate-850 rounded-xl p-2.5 flex items-center justify-between gap-3 my-2 transition-all">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => {
-                                if (isDictating && dictationTarget === "chapter") {
-                                  stopDictation();
-                                } else {
-                                  startDictation("chapter");
-                                }
-                              }}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                isDictating && dictationTarget === "chapter"
-                                  ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
-                                  : "bg-amber-500/10 hover:bg-amber-500/25 text-amber-400 border border-amber-500/20"
-                              }`}
-                            >
-                              <Mic className="w-3.5 h-3.5" />
-                              <span>{isDictating && dictationTarget === "chapter" ? "Detener Dictado" : "Grabar por voz"}</span>
-                            </button>
-                            
-                            {isDictating && dictationTarget === "chapter" && (
-                              <div className="flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-                                <span className="text-[10px] text-slate-400 font-mono animate-pulse">Grabación activa...</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex-1 text-right truncate">
-                            {dictatedTextTemp ? (
-                              <span className="text-[10px] italic text-amber-300 font-mono animate-pulse">
-                                "...{dictatedTextTemp}"
-                              </span>
-                            ) : isDictating && dictationTarget === "chapter" ? (
-                              <span className="text-[10.5px] text-slate-500 italic">Dictando directamente al cursor...</span>
-                            ) : (
-                              <span className="text-[10px] text-slate-500 font-mono">Apoyo para dislexia y rapidez editorial</span>
-                            )}
-                          </div>
+                      <div className="space-y-1 flex-1 flex flex-col">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs text-slate-400 font-medium block">
+                            Párrafos literarios (los saltos de línea dobles generan nuevos párrafos para la compaginación):
+                          </label>
+                          {speechSupported && (
+                            <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800/80 py-0.5 px-2 rounded-full">
+                              <label className="text-[9px] text-slate-500 font-mono">Idioma:</label>
+                              <select
+                                value={speechLang}
+                                onChange={(e) => {
+                                  setSpeechLang(e.target.value);
+                                  if (isDictating && dictationTarget === "chapter") {
+                                    stopDictation();
+                                  }
+                                }}
+                                className="bg-transparent border-none text-[9.5px] text-slate-300 font-mono focus:outline-none cursor-pointer"
+                              >
+                                <option value="es-ES" className="bg-slate-900 pb-1">Español 🇪🇸</option>
+                                <option value="en-US" className="bg-slate-900 pb-1">English 🇺🇸</option>
+                                <option value="pt-PT" className="bg-slate-900 pb-1">Português 🇵🇹</option>
+                                <option value="fr-FR" className="bg-slate-900 pb-1">Français 🇫🇷</option>
+                                <option value="it-IT" className="bg-slate-900 pb-1 font-sans">Italiano 🇮🇹</option>
+                              </select>
+                            </div>
+                          )}
                         </div>
-                      )}
 
-                      {/* Error display if dictation fails */}
-                      {dictationError && dictationTarget === "chapter" && (
-                        <div className="bg-red-950/30 border border-red-900 p-2 rounded-lg text-[10px] text-red-400 flex items-center gap-1.5 my-2">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                          <span>{dictationError}</span>
-                          <button onClick={() => setDictationError(null)} className="ml-auto text-slate-400 hover:text-white focus:outline-none">✕</button>
-                        </div>
-                      )}
+                        {/* VOICE DICTATION CONTROLS BAR FOR MODAL EDITING */}
+                        {speechSupported && (
+                          <div className="bg-slate-950 border border-slate-850 rounded-xl p-2.5 flex items-center justify-between gap-3 my-1.5 transition-all">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  if (isDictating && dictationTarget === "chapter") {
+                                    stopDictation();
+                                  } else {
+                                    startDictation("chapter");
+                                  }
+                                }}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  isDictating && dictationTarget === "chapter"
+                                    ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
+                                    : "bg-amber-500/10 hover:bg-amber-500/25 text-amber-400 border border-amber-500/20"
+                                }`}
+                              >
+                                <Mic className="w-3.5 h-3.5" />
+                                <span>{isDictating && dictationTarget === "chapter" ? "Detener Dictado" : "Grabar por voz"}</span>
+                              </button>
+                              
+                              {isDictating && dictationTarget === "chapter" && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                                  <span className="text-[10px] text-slate-400 font-mono animate-pulse">Grabación activa...</span>
+                                </div>
+                              )}
+                            </div>
 
-                      <textarea
-                        id="chapter-editor-input"
-                        value={editingChapterText}
-                        onChange={(e) => updateChapterTextWithHistory(e.target.value)}
-                        rows={12}
-                        className="w-full text-xs bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-100 focus:outline-none focus:border-amber-500 font-mono leading-relaxed"
-                      />
+                            <div className="flex-1 text-right truncate">
+                              {dictatedTextTemp ? (
+                                <span className="text-[10px] italic text-amber-300 font-mono animate-pulse">
+                                  "...{dictatedTextTemp}"
+                                </span>
+                              ) : isDictating && dictationTarget === "chapter" ? (
+                                <span className="text-[10.5px] text-slate-500 italic">Dictando directamente al cursor...</span>
+                              ) : (
+                                <span className="text-[10px] text-slate-500 font-mono">Apoyo para dislexia y rapidez editorial</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Error display if dictation fails */}
+                        {dictationError && dictationTarget === "chapter" && (
+                          <div className="bg-red-950/30 border border-red-900 p-2 rounded-lg text-[10px] text-red-400 flex items-center gap-1.5 my-1.5">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>{dictationError}</span>
+                            <button onClick={() => setDictationError(null)} className="ml-auto text-slate-400 hover:text-white focus:outline-none">✕</button>
+                          </div>
+                        )}
+
+                        <textarea
+                          id="chapter-editor-input"
+                          value={editingChapterText}
+                          onChange={(e) => updateChapterTextWithHistory(e.target.value)}
+                          className="w-full text-xs bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-100 focus:outline-none focus:border-amber-500 font-mono leading-relaxed flex-1 min-h-[300px]"
+                        />
+                      </div>
                     </div>
+
+                    {/* Right Column: Corrector & Magia Editorial */}
+                    <div className="md:w-2/5 border border-slate-800 bg-slate-950 rounded-xl p-4 flex flex-col justify-between max-h-[600px] overflow-hidden">
+                      <div className="flex flex-col h-full overflow-hidden">
+                        
+                        {/* Panel Title */}
+                        <div className="flex items-center gap-1.5 pb-2 border-b border-slate-850 shrink-0">
+                          <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+                          <span className="text-xs font-bold text-white tracking-wide uppercase font-mono">Corrector & Magia Editorial</span>
+                        </div>
+
+                        {/* TABS SELECTOR */}
+                        <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-850 my-3 gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setActiveAnalysisTab("corrections")}
+                            className={`flex-1 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all tracking-wide cursor-pointer ${
+                              activeAnalysisTab === "corrections"
+                                ? "bg-slate-800 text-white shadow-inner border border-slate-700"
+                                : "text-slate-400 hover:text-slate-200"
+                            }`}
+                          >
+                            🩺 Corrector RAE
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveAnalysisTab("magic")}
+                            className={`flex-1 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all tracking-wide cursor-pointer ${
+                              activeAnalysisTab === "magic"
+                                ? "bg-slate-800 text-white shadow-inner border border-slate-700"
+                                : "text-slate-400 hover:text-slate-200"
+                            }`}
+                          >
+                            ✨ Sección Magia
+                          </button>
+                        </div>
+
+                        {/* DESCRIPTIONS & LISTS AREA */}
+                        <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+                          {isAnalyzingText ? (
+                            <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
+                              <span className="w-8 h-8 border-3 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                              <span className="text-xs font-bold text-slate-300">Conectando con el corrector de la RAE...</span>
+                              <p className="text-[10px] text-slate-500 max-w-xs italic animate-pulse">
+                                Heurística y gramática neuronal analizando repeticiones, incoherencias narrativas y guiones de diálogo...
+                              </p>
+                            </div>
+                          ) : !textAnalysisResults ? (
+                            <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2.5">
+                              <div className="w-10 h-10 rounded-full bg-slate-900 border border-slate-850 flex items-center justify-center">
+                                <Feather className="w-5 h-5 text-amber-500/80" />
+                              </div>
+                              <span className="text-xs font-bold text-slate-300">Revisión Automática</span>
+                              <p className="text-[10px] text-slate-400 max-w-[220px] leading-relaxed mx-auto">
+                                Presiona el botón de abajo para que la IA revise tu texto en busca de ortografía, rayas de diálogo correctas, palabras repetidas y saltos de coherencia.
+                              </p>
+                            </div>
+                          ) : activeAnalysisTab === "corrections" ? (
+                            /* Corrections listing */
+                            textAnalysisResults.corrections.length === 0 ? (
+                              <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2">
+                                <span className="text-2xl">🎉</span>
+                                <span className="text-xs font-bold text-emerald-400">¡Texto Ortotipográfico Perfecto!</span>
+                                <p className="text-[9.5px] text-slate-400 leading-relaxed">
+                                  No hemos detectado errores graves de acentuación, guiones ni dobles espacios. ¡Gran labor de escritura!
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <div className="text-[9.5px] text-slate-500 uppercase tracking-widest font-mono font-bold">
+                                  Incoherencias Técnicas Detectadas ({textAnalysisResults.corrections.length}):
+                                </div>
+                                {textAnalysisResults.corrections.map((corr, idx) => (
+                                  <div key={idx} className="p-3 bg-red-950/10 border border-rose-955/40 rounded-lg text-left space-y-1.5 animate-fadeIn">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[9px] font-mono text-rose-400 uppercase font-black bg-rose-500/10 px-1.5 py-0.5 rounded">
+                                        {corr.type === "rae-dashes" ? "Rayas RAE" : corr.type === "accent" ? "Acento" : corr.type === "grammar" ? "Gramática" : "Ortografía"}
+                                      </span>
+                                      <button
+                                        onClick={() => applyTextImprovement(corr.original, corr.replacement)}
+                                        className="text-[9px] font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 px-2 py-0.5 rounded transition-all cursor-pointer"
+                                      >
+                                        Sustituir
+                                      </button>
+                                    </div>
+                                    <div className="text-[10px] leading-relaxed break-words">
+                                      <span className="line-through text-slate-500 border-r border-slate-800 pr-1 mr-1">"{corr.original}"</span>
+                                      <span className="text-emerald-400 font-bold bg-emerald-500/5 px-1 py-0.2 rounded">"{corr.replacement}"</span>
+                                    </div>
+                                    <p className="text-[9px] text-slate-450 leading-normal italic">
+                                      {corr.reason}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            )
+                          ) : (
+                            /* Magic Suggestions listing */
+                            textAnalysisResults.magicSuggestions.length === 0 ? (
+                              <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2">
+                                <span className="text-2xl">✨</span>
+                                <span className="text-xs font-bold text-indigo-400">Riqueza Narrativa Excelente</span>
+                                <p className="text-[9.5px] text-slate-400 leading-relaxed">
+                                  No hallamos palabras altamente redundantes ni incoherencias importantes. Tu narrativa fluye de forma sumamente orgánica.
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <div className="text-[9.5px] text-slate-500 uppercase tracking-widest font-mono font-bold">
+                                  Propuestas de Magia Editorial ({textAnalysisResults.magicSuggestions.length}):
+                                </div>
+                                {textAnalysisResults.magicSuggestions.map((sug, idx) => (
+                                  <div key={idx} className="p-3 bg-indigo-950/15 border border-indigo-955/40 rounded-lg text-left space-y-1.5 animate-fadeIn">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[9px] font-mono text-indigo-300 uppercase font-black bg-indigo-500/10 px-1.5 py-0.5 rounded">
+                                        {sug.type === "repetitive" ? "Repetición" : sug.type === "coherence" ? "Coherencia" : sug.type === "flow" ? "Fluidez" : "Riqueza Léxica"}
+                                      </span>
+                                      <button
+                                        onClick={() => applyTextImprovement(sug.original, sug.replacement)}
+                                        className="text-[9px] font-bold bg-indigo-500 hover:bg-indigo-400 text-slate-950 px-2 py-0.5 rounded transition-all cursor-pointer"
+                                      >
+                                        ✨ Aplicar
+                                      </button>
+                                    </div>
+                                    <div className="text-[10px] leading-relaxed break-words">
+                                      <span className="text-slate-450 pr-1">Original: "{sug.original}"</span>
+                                      <div className="text-cyan-300 font-bold mt-1 bg-cyan-500/5 p-1 rounded">Sustituir por: "{sug.replacement}"</div>
+                                    </div>
+                                    <p className="text-[9px] text-slate-400 leading-normal italic">
+                                      {sug.reason}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            )
+                          )}
+                        </div>
+
+                        {/* TRIGGERS CTA FOOTER OF THE PANEL */}
+                        <div className="pt-3 border-t border-slate-850 mt-2 shrink-0">
+                          {textAnalysisResults ? (
+                            <button
+                              type="button"
+                              onClick={analyzeChapterText}
+                              disabled={isAnalyzingText}
+                              className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10.5px] py-2 rounded-lg font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                            >
+                              <RefreshCw className={`w-3 h-3 ${isAnalyzingText ? "animate-spin" : ""}`} />
+                              <span>Re-analizar Texto</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={analyzeChapterText}
+                              disabled={isAnalyzingText}
+                              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-450 hover:to-amber-500 text-slate-950 font-bold py-2 rounded-lg text-[10.5px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                            >
+                              {isAnalyzingText ? (
+                                <>
+                                  <span className="w-3 h-3 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                                  <span>Invocando Heurística...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                                  <span>Escanear Corrector & Magia</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+
+                      </div>
+                    </div>
+
                   </div>
 
                   {/* Modal Footer */}
