@@ -38,10 +38,12 @@ async function generateContentWithRetry(params: any, retries = 3, initialDelay =
   const ai = getAI();
   let lastError: any = null;
   let delay = initialDelay;
+  let currentModel = params.model;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const response = await ai.models.generateContent(params);
+      const callParams = { ...params, model: currentModel };
+      const response = await ai.models.generateContent(callParams);
       return response;
     } catch (error: any) {
       lastError = error;
@@ -51,8 +53,16 @@ async function generateContentWithRetry(params: any, retries = 3, initialDelay =
                           errMsg.includes("UNAVAILABLE") || errMsg.includes("high demand") || 
                           errMsg.includes("overloaded") || errMsg.includes("temporary");
                           
-      console.warn(`[Gemini API] Intento ${attempt}/${retries} fallido: ${errMsg}`);
+      console.warn(`[Gemini API] Intento ${attempt}/${retries} fallido con modelo ${currentModel}: ${errMsg}`);
       
+      // If we encounter a transient/503 peak on gemini-3.5-flash, fall back immediately to gemini-3.1-flash-lite
+      if (isTransient && currentModel === "gemini-3.5-flash") {
+        console.info(`[Gemini API] Redirigiendo petición por alta demanda del modelo gemini-3.5-flash -> gemini-3.1-flash-lite.`);
+        currentModel = "gemini-3.1-flash-lite";
+        // Re-execute immediately with the fallback model
+        continue;
+      }
+
       if (isTransient && attempt < retries) {
         console.log(`[Gemini API] Detectado error transitorio. Reintentando en ${delay}ms... (Próximo intento: ${attempt + 1})`);
         await new Promise(resolve => setTimeout(resolve, delay));
