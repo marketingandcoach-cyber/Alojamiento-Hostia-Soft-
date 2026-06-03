@@ -695,6 +695,7 @@ export default function App() {
     magicSuggestions: Array<{ original: string; replacement: string; reason: string; type: string }>;
   } | null>(null);
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<"corrections" | "magic">("corrections");
+  const [mobileEditorTab, setMobileEditorTab] = useState<"text" | "corrector">("text");
 
   useEffect(() => {
     if (editingChapterIdx === null) {
@@ -2113,6 +2114,7 @@ export default function App() {
     const initialText = chap.paragraphs.join("\n\n");
     setEditingChapterTitle(chap.title);
     setEditingChapterText(initialText);
+    setMobileEditorTab("text");
     
     // Set initial history entry
     const initialEntry = { title: chap.title, text: initialText };
@@ -8387,11 +8389,40 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                     </div>
                   </div>
 
+                  {/* Mobile Tab Selector (Visible only on cellphones, hidden on desktop) */}
+                  <div className="flex md:hidden bg-slate-950 border-b border-slate-800 p-1.5 gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setMobileEditorTab("text")}
+                      className={`flex-1 py-2 text-center rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        mobileEditorTab === "text"
+                          ? "bg-amber-500 text-slate-950 shadow-md"
+                          : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
+                      }`}
+                    >
+                      <span>📝 Editor de Texto</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMobileEditorTab("corrector")}
+                      className={`flex-1 py-2 text-center rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        mobileEditorTab === "corrector"
+                          ? "bg-amber-500 text-slate-950 shadow-md"
+                          : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
+                      }`}
+                    >
+                      <span>🩺 Corrector & Magia</span>
+                      {textAnalysisResults && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                      )}
+                    </button>
+                  </div>
+
                   {/* Modal Inputs and AI assistance tool dual panel */}
                   <div className="p-5 overflow-y-auto flex-1 flex flex-col md:flex-row gap-5">
                     
                     {/* Left Column: Traditional Editor */}
-                    <div className="flex-1 md:w-3/5 space-y-4 flex flex-col">
+                    <div className={`flex-1 md:w-3/5 space-y-4 flex-col ${mobileEditorTab === "text" ? "flex" : "hidden md:flex"}`}>
                       <div className="space-y-1">
                         <label className="text-xs text-slate-400 font-medium block">
                           Título oficial del Capítulo:
@@ -8495,7 +8526,7 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                     </div>
 
                     {/* Right Column: Corrector & Magia Editorial */}
-                    <div className="md:w-2/5 border border-slate-800 bg-slate-950 rounded-xl p-4 flex flex-col justify-between max-h-[600px] overflow-hidden">
+                    <div className={`md:w-2/5 border border-slate-800 bg-slate-950 rounded-xl p-4 flex-col justify-between overflow-hidden ${mobileEditorTab === "corrector" ? "flex min-h-[450px]" : "hidden md:flex md:max-h-[600px]"}`}>
                       <div className="flex flex-col h-full overflow-hidden">
                         
                         {/* Panel Title */}
