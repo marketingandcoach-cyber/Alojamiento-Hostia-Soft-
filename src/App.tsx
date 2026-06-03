@@ -751,8 +751,9 @@ export default function App() {
           // Create regex that permits any whitespace characters (\s+) between original words
           const escapedWords = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+");
           const flexibleRegex = new RegExp(escapedWords, "g");
-          if (flexibleRegex.test(editingChapterText)) {
-            updatedText = editingChapterText.replace(flexibleRegex, replacement);
+          const afterReplace = editingChapterText.replace(flexibleRegex, replacement);
+          if (afterReplace !== editingChapterText) {
+            updatedText = afterReplace;
             applied = true;
           }
         } catch (e) {

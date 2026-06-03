@@ -55,9 +55,9 @@ async function generateContentWithRetry(params: any, retries = 3, initialDelay =
                           
       console.warn(`[Gemini API] Intento ${attempt}/${retries} fallido con modelo ${currentModel}: ${errMsg}`);
       
-      // If we encounter a transient/503 peak on gemini-3.5-flash, fall back immediately to gemini-3.1-flash-lite
-      if (isTransient && currentModel === "gemini-3.5-flash") {
-        console.info(`[Gemini API] Redirigiendo petición por alta demanda del modelo gemini-3.5-flash -> gemini-3.1-flash-lite.`);
+      // Fall back immediately to gemini-3.1-flash-lite for ANY error on gemini-3.5-flash to guarantee ultra-high reliability
+      if (currentModel === "gemini-3.5-flash") {
+        console.info(`[Gemini API] Redirigiendo petición del modelo gemini-3.5-flash -> gemini-3.1-flash-lite debido a: ${errMsg}`);
         currentModel = "gemini-3.1-flash-lite";
         // Re-execute immediately with the fallback model
         continue;
