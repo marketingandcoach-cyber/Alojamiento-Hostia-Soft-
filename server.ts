@@ -132,6 +132,88 @@ function safeParseJSON(inputText: string | undefined | null, fallback: any = {})
   }
 }
 
+// --- ANALYTICS AND VISIT TRACKER STACK ---
+const ANALYTICS_FILE_PATH = path.join(process.cwd(), "analytics-v1.json");
+
+interface VisitorLog {
+  timestamp: string;
+  ip: string;
+  userAgent: string;
+  isMobile: boolean;
+  referrer: string;
+  resolution?: string;
+}
+
+interface ActivityLog {
+  timestamp: string;
+  action: string;
+  details: string;
+}
+
+interface AnalyticsPayload {
+  totalVisits: number;
+  uniqueVisitors: number;
+  mobileVisits: number;
+  desktopVisits: number;
+  visitorLogs: VisitorLog[];
+  activityLogs: ActivityLog[];
+}
+
+// Global cached state in case of concurrent writes
+let cachedAnalytics: AnalyticsPayload | null = null;
+
+function loadAnalyticsFromFile(): AnalyticsPayload {
+  if (cachedAnalytics) return cachedAnalytics;
+  
+  try {
+    if (fs.existsSync(ANALYTICS_FILE_PATH)) {
+      const content = fs.readFileSync(ANALYTICS_FILE_PATH, "utf-8");
+      cachedAnalytics = JSON.parse(content);
+      if (cachedAnalytics) {
+        if (!Array.isArray(cachedAnalytics.visitorLogs)) cachedAnalytics.visitorLogs = [];
+        if (!Array.isArray(cachedAnalytics.activityLogs)) cachedAnalytics.activityLogs = [];
+        return cachedAnalytics;
+      }
+    }
+  } catch (e) {
+    console.error("[Analytics System] Error loading analytics from file, generating new database...", e);
+  }
+
+  cachedAnalytics = {
+    totalVisits: 0,
+    uniqueVisitors: 0,
+    mobileVisits: 0,
+    desktopVisits: 0,
+    visitorLogs: [],
+    activityLogs: []
+  };
+  return cachedAnalytics;
+}
+
+function saveAnalyticsToFile(data: AnalyticsPayload) {
+  cachedAnalytics = data;
+  try {
+    fs.writeFileSync(ANALYTICS_FILE_PATH, JSON.stringify(data, null, 2), "utf-8");
+  } catch (e) {
+    console.error("[Analytics System] Failed to secure analytics on database file:", e);
+  }
+}
+
+// Log a user activity
+function trackActivity(action: string, details: string) {
+  const data = loadAnalyticsFromFile();
+  data.activityLogs.unshift({
+    timestamp: new Date().toISOString(),
+    action,
+    details
+  });
+  // Cap activity logs size log at 150 to keep JSON small
+  if (data.activityLogs.length > 150) {
+    data.activityLogs = data.activityLogs.slice(0, 150);
+  }
+  saveAnalyticsToFile(data);
+}
+
 // Safe heuristic parser of book styles when the AI service is offline or overloaded
 function getFallbackStyleSuggestion(text: string): any {
   const sample = text.toLowerCase();
@@ -353,9 +435,11 @@ Debes responder estrictamente en formato JSON con la siguiente estructura:
     });
  
     const config = safeParseJSON(response.text, {});
+    trackActivity("Análisis Estético de Libro", `Se generó la ficha técnica de maquetación para estilo "${config.archetype || "Maquetación Personalizada"}". Fuentes estimadas: ${config.fontTitle} / ${config.fontBody}.`);
     res.json(config);
   } catch (error: any) {
     console.error("Error analyzing style:", error);
+    trackActivity("Error en Análisis Estético", `Fallo al procesar el estilo con Gemini debido a: ${error.message || error}`);
     try {
       const fallbackSuggestion = getFallbackStyleSuggestion(prompt || "Ficción Clásica");
       res.json({
@@ -915,6 +999,66 @@ app.post("/api/download", (req, res) => {
   res.send(content);
 });
 
+// --- SISTEMA DE ANALÍTICAS Y VISITAS ENDPOINTS ---
+app.post("/api/track-visit", (req, res) => {
+  try {
+    const { isMobile, referrer, resolution } = req.body;
+    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
+    const userAgent = req.headers["user-agent"] || "Desconocido";
+
+    const data = loadAnalyticsFromFile();
+    data.totalVisits += 1;
+
+    if (isMobile) {
+      data.mobileVisits += 1;
+    } else {
+      data.desktopVisits += 1;
+    }
+
+    // Heuristic for unique visitor: IP must not have connected in the past 12 hours
+    const twelveHoursAgo = Date.now() - 12 * 60 * 60 * 1000;
+    const isUnique = !data.visitorLogs.some(log => {
+      const logTime = new Date(log.timestamp).getTime();
+      return log.ip === ip && logTime > twelveHoursAgo;
+    });
+
+    if (isUnique) {
+      data.uniqueVisitors += 1;
+    }
+
+    // Add visitor log entry
+    data.visitorLogs.unshift({
+      timestamp: new Date().toISOString(),
+      ip: String(ip).split(",")[0].trim(), // get first IP if behind proxies
+      userAgent: String(userAgent),
+      isMobile: !!isMobile,
+      referrer: String(referrer || "Acceso Directo"),
+      resolution: String(resolution || "Desconocida")
+    });
+
+    // Cap logs size at 120
+    if (data.visitorLogs.length > 120) {
+      data.visitorLogs = data.visitorLogs.slice(0, 120);
+    }
+
+    saveAnalyticsToFile(data);
+    res.json({ success: true, visits: data.totalVisits, unique: data.uniqueVisitors });
+  } catch (error) {
+    console.error("[Analytics System] Error al registrar visita:", error);
+    res.json({ success: false });
+  }
+});
+
+app.get("/api/analytics", (req, res) => {
+  try {
+    const data = loadAnalyticsFromFile();
+    res.json(data);
+  } catch (error) {
+    console.error("[Analytics System] Error al obtener analíticas:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
 // 5.5 TEXT CORRECTOR AND LITERARY MAGIC ENDPOINT
 app.post("/api/correct-and-magic", async (req, res) => {
   const { text, language } = req.body;
@@ -1002,9 +1146,14 @@ Responde estrictamente en formato JSON de acuerdo a este esquema:
     console.info(`[Correct & Magic] Iniciando análisis para texto de longitud: ${text.length}`);
     const parsedData = safeParseJSON(response.text, { corrections: [], magicSuggestions: [] });
     console.info(`[Correct & Magic] Análisis completado con éxito. Encontrados: ${parsedData.corrections?.length || 0} correcciones, ${parsedData.magicSuggestions?.length || 0} sugerencias mágicas.`);
+    
+    // Registrar actividad en el sistema de analíticas
+    trackActivity("Corrector y Magia Editorial", `Revisión de texto de ${text.length} caracteres. Se detectaron ${parsedData.corrections?.length || 0} correcciones RAE y ${parsedData.magicSuggestions?.length || 0} sugerencias mágicas de estilo.`);
+
     res.json(parsedData);
   } catch (error: any) {
     console.error("Error analizando correct-and-magic:", error);
+    trackActivity("Error en Corrector", `Fallo al procesar corrector ortotipográfico en el servidor debido a: ${error.message || error}`);
     res.json({ corrections: [], magicSuggestions: [] });
   }
 });

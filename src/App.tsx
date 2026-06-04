@@ -697,6 +697,53 @@ export default function App() {
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<"corrections" | "magic">("corrections");
   const [mobileEditorTab, setMobileEditorTab] = useState<"text" | "corrector">("text");
 
+  // --- ANALYTICS AND VISIT METRICS STATES ---
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState<boolean>(false);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState<boolean>(false);
+
+  // Auto-track user visit and load stats on launch
+  useEffect(() => {
+    const trackAndInit = async () => {
+      try {
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const ref = document.referrer || "Acceso Directo";
+        const res = `${window.screen.width}x${window.screen.height}`;
+        
+        await fetch("/api/track-visit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            isMobile: isMobileDevice,
+            referrer: ref,
+            resolution: res
+          })
+        });
+      } catch (err) {
+        console.warn("[Analytics Tracker] Fallo ligero al registrar la entrada de visita:", err);
+      }
+    };
+    trackAndInit();
+  }, []);
+
+  const fetchAnalytics = async () => {
+    setIsLoadingAnalytics(true);
+    try {
+      const res = await fetch("/api/analytics");
+      if (res.ok) {
+        const data = await res.json();
+        setAnalyticsData(data);
+      } else {
+        triggerStudioToast("Fallo al obtener estadísticas en tiempo real del servidor.", "warning");
+      }
+    } catch (err) {
+      console.error(err);
+      triggerStudioToast("Error de conexión al obtener estadísticas.", "warning");
+    } finally {
+      setIsLoadingAnalytics(false);
+    }
+  };
+
   useEffect(() => {
     if (editingChapterIdx === null) {
       setTextAnalysisResults(null);
@@ -4435,6 +4482,19 @@ ${generatedScreenplayText}
             <Globe className="w-4 h-4 text-amber-500 animate-pulse" />
             <span>{language === "en" ? "GLOBAL WEBSITE" : language === "pt" ? "SITE COMERCIAL" : "SITIO WEB COMERCIAL"}</span>
           </button>
+          
+          <button
+            onClick={() => {
+              setShowAnalyticsModal(true);
+              fetchAnalytics();
+            }}
+            className="no-print bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-850 text-emerald-400 font-bold px-4 py-2 rounded-lg text-xs flex items-center gap-2 transition-all cursor-pointer"
+            title="Ver estadísticas y tráfico de la plataforma en tiempo real"
+          >
+            <TrendingUp className="w-4 h-4 text-emerald-400 animate-pulse" />
+            <span>{language === "en" ? "METRICS & VISITS" : language === "pt" ? "TRÁFEGO E VISITAS" : "VISITAS Y ANALÍTICAS"}</span>
+          </button>
+
           <button
             onClick={handlePrint}
             className="bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-semibold px-4 py-2 rounded-lg text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-amber-500/10 cursor-pointer transition-transform hover:-translate-y-0.5"
@@ -8334,6 +8394,227 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                   </div>
                 )}
 
+              </div>
+            )}
+
+            {/* ANALYTICS AND TRAFFIC METRICS MODAL */}
+            {showAnalyticsModal && (
+              <div id="analytics-modal-overlay" className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fadeIn">
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl flex flex-col max-h-[85vh] shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                  
+                  {/* Modal Header */}
+                  <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/50 rounded-t-2xl">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                        <TrendingUp className="w-5 h-5 text-emerald-400 animate-pulse" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-white flex items-center gap-2">
+                          <span>Monitor De Tráfico y Analíticas Web</span>
+                          <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">Tiempo Real</span>
+                        </h3>
+                        <p className="text-xs text-slate-400">Estadísticas de visitas a la aplicación y uso del motor de Inteligencia Editorial.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={fetchAnalytics}
+                        disabled={isLoadingAnalytics}
+                        className="bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5 transition-all select-none cursor-pointer disabled:opacity-50"
+                      >
+                        {isLoadingAnalytics ? (
+                          <span className="w-3.5 h-3.5 rounded-full border-2 border-slate-400 border-t-transparent animate-spin"></span>
+                        ) : (
+                          <span>Refrescar ↻</span>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setShowAnalyticsModal(false)}
+                        className="text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800 p-2 rounded-lg transition-colors cursor-pointer w-8 h-8 flex items-center justify-center"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Modal Body */}
+                  <div className="p-6 overflow-y-auto flex-1 space-y-6">
+                    {/* Tarjetas de Métricas Rápidas */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                      {/* Total Visitas */}
+                      <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-3 opacity-15">
+                          <Eye className="w-12 h-12 text-blue-400" />
+                        </div>
+                        <span className="text-slate-400 text-xs font-bold block uppercase tracking-wider">Visitas Totales</span>
+                        <div className="flex items-baseline gap-2 mt-1">
+                          <span className="text-3xl font-black text-white tracking-tight">
+                            {analyticsData ? analyticsData.totalVisits : "—"}
+                          </span>
+                          <span className="text-xs text-emerald-400 font-bold">● Activo</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-2">Visitas del manuscrito acumuladas.</p>
+                      </div>
+
+                      {/* Visitantes Únicos */}
+                      <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-3 opacity-15">
+                          <Globe className="w-12 h-12 text-emerald-400" />
+                        </div>
+                        <span className="text-slate-400 text-xs font-bold block uppercase tracking-wider">Lectores Únicos</span>
+                        <div className="flex items-baseline gap-2 mt-1">
+                          <span className="text-3xl font-black text-white tracking-tight">
+                            {analyticsData ? analyticsData.uniqueVisitors : "—"}
+                          </span>
+                          <span className="text-xs text-indigo-400 font-bold">IP Únicas</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-2">Calculado por sesiones de 12 horas.</p>
+                      </div>
+
+                      {/* Tráfico Celular / Mobile */}
+                      <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-3 opacity-15">
+                          <Smartphone className="w-12 h-12 text-amber-500" />
+                        </div>
+                        <span className="text-slate-400 text-xs font-bold block uppercase tracking-wider">Vías Celular</span>
+                        <div className="flex items-baseline gap-2 mt-1">
+                          <span className="text-3xl font-black text-amber-400 tracking-tight">
+                            {analyticsData ? analyticsData.mobileVisits : "—"}
+                          </span>
+                          {analyticsData && (
+                            <span className="text-xs text-slate-400 font-medium font-mono">
+                              {Math.round((analyticsData.mobileVisits / (analyticsData.totalVisits || 1)) * 100)}%
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-2">Usuarios con iPhone o Android.</p>
+                      </div>
+
+                      {/* Tráfico Web/Desktop */}
+                      <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-3 opacity-15">
+                          <Tablet className="w-12 h-12 text-cyan-405" />
+                        </div>
+                        <span className="text-slate-400 text-xs font-bold block uppercase tracking-wider">Vías Escritorio</span>
+                        <div className="flex items-baseline gap-2 mt-1">
+                          <span className="text-3xl font-black text-cyan-400 tracking-tight">
+                            {analyticsData ? analyticsData.desktopVisits : "—"}
+                          </span>
+                          {analyticsData && (
+                            <span className="text-xs text-slate-400 font-medium font-mono">
+                              {Math.round((analyticsData.desktopVisits / (analyticsData.totalVisits || 1)) * 100)}%
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-2">Usuarios en computadoras.</p>
+                      </div>
+                    </div>
+
+                    {/* Doble Columna: Log de Visitas Recientes & Log del Servidor IA */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                      
+                      {/* Log de Tránsito Web en Vivo */}
+                      <div className="bg-slate-950/80 border border-slate-850 rounded-xl p-4 flex flex-col h-[320px] overflow-hidden">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-850 mb-3 shrink-0">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">Visitantes Recientes en Vivo</h4>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-mono">En tiempo real</span>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+                          {analyticsData && analyticsData.visitorLogs && analyticsData.visitorLogs.length > 0 ? (
+                            analyticsData.visitorLogs.map((log: any, idx: number) => {
+                              const time = new Date(log.timestamp).toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                              return (
+                                <div key={idx} className="bg-slate-900 border border-slate-850/60 p-2.5 rounded-lg flex items-center justify-between gap-3 text-xs">
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="shrink-0">
+                                      {log.isMobile ? (
+                                        <Smartphone className="w-4 h-4 text-amber-500" />
+                                      ) : (
+                                        <Tablet className="w-4 h-4 text-cyan-400" />
+                                      )}
+                                    </div>
+                                    <div className="truncate min-w-0">
+                                      <div className="font-mono text-[11px] text-white flex items-center gap-1.5 leading-none">
+                                        <span>IP: {log.ip}</span>
+                                        <span className="text-[9px] bg-slate-800 text-slate-400 px-1 py-0.2 rounded font-sans">{log.resolution}</span>
+                                      </div>
+                                      <span className="text-[10px] text-slate-400 leading-normal truncate shrink block mt-1">
+                                        Vía: <strong className="text-slate-300 font-medium">{log.referrer}</strong>
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <span className="text-[10px] font-mono text-slate-500">{time}</span>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-550 text-center text-xs p-6 gap-2">
+                              <span>Ninguna visita registrada en este contenedor aún. Las visitas se registrarán en directo.</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Log de Operaciones de IA en Servidor */}
+                      <div className="bg-slate-950/80 border border-slate-850 rounded-xl p-4 flex flex-col h-[320px] overflow-hidden">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-850 mb-3 shrink-0">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">Log de Acciones Editoriales IA</h4>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-mono">Historial de peticiones</span>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+                          {analyticsData && analyticsData.activityLogs && analyticsData.activityLogs.length > 0 ? (
+                            analyticsData.activityLogs.map((activity: any, idx: number) => {
+                              const time = new Date(activity.timestamp).toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                              return (
+                                <div key={idx} className="bg-slate-900 border border-slate-850/60 p-2.5 rounded-lg text-xs space-y-1">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="font-bold text-slate-200 flex items-center gap-1.5">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                                      {activity.action}
+                                    </span>
+                                    <span className="text-[10px] font-mono text-slate-500">{time}</span>
+                                  </div>
+                                  <p className="text-slate-400 text-[10.5px] leading-relaxed select-text">
+                                    {activity.details}
+                                  </p>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-550 text-center text-xs p-6 gap-2">
+                              <span>Ninguna acción registrada en esta sesión del servidor. Comienza a maquetar o corregir capítulos para recolectar históricos de IA.</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="p-4 border-t border-slate-800 bg-slate-950/40 rounded-b-2xl text-[10px] text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <span>
+                      Nota de Ingress: Las visitas se evalúan utilizando firmas de seguridad web y almacenamiento de persistencia por servidor.
+                    </span>
+                    <button
+                      onClick={() => setShowAnalyticsModal(false)}
+                      className="bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-slate-950 font-bold px-4 py-1.5 rounded-lg text-xs shadow-md transition-all cursor-pointer shrink-0"
+                    >
+                      Aceptar y Cerrar
+                    </button>
+                  </div>
+
+                </div>
               </div>
             )}
 
