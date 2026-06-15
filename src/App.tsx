@@ -56,6 +56,8 @@ import {
   MessageSquare,
   Send,
   Heart,
+  Award,
+  DollarSign,
   X
 } from "lucide-react";
 import { BookStyleSettings, Chapter, BookMetadata, SimulatedPage, ARCHETYPES, Illustration } from "./types";
@@ -271,6 +273,16 @@ const EDITORIAL_DATABASE = [
 export default function App() {
   // --- STATE ---
   const [language, setLanguage] = useState<SupportedLanguages>("es");
+  
+  // --- INTERACTIVE ONBOARDING AND USER TOUR STATES ---
+  const [onboardingOpen, setOnboardingOpen] = useState<boolean>(true);
+  const [onboardingStepCompleted, setOnboardingStepCompleted] = useState<Record<string, boolean>>({
+    manuscript: false,
+    archetype: false,
+    corrector: false,
+    voice: false,
+    print: false
+  });
 
   // Custom non-blocking HUD Toast / Alert states for sandboxed iframe
   const [studioToast, setStudioToast] = useState<{ message: string; type: "success" | "info" | "warning" } | null>(null);
@@ -479,8 +491,8 @@ export default function App() {
   const [styleSuggestionError, setStyleSuggestionError] = useState<string | null>(null);
 
   // UI Tabs for control sidebar
-  const [activeTab, setActiveTab] = useState<"preset" | "manual" | "content" | "compatibility" | "copyright" | "pitch" | "multimedia" | "screenplay">("preset");
-  const [viewMode, setViewMode] = useState<"landing" | "studio">("landing");
+  const [activeTab, setActiveTab] = useState<"preset" | "manual" | "content" | "compatibility" | "copyright" | "pitch" | "multimedia" | "screenplay" | "guiautor">("guiautor");
+  const [viewMode, setViewMode] = useState<"landing" | "studio">("studio");
   const [currentUser, setCurrentUser] = useState<{ email: string; name: string; workspace: string } | null>(null);
   const [showDriveModal, setShowDriveModal] = useState<boolean>(false);
   const [driveImportingStatus, setDriveImportingStatus] = useState<"idle" | "connecting" | "downloading" | "analyzing" | "formatting" | "success">("idle");
@@ -623,6 +635,15 @@ export default function App() {
 
   // --- CINEMATIC SCREENPLAY & MAVERICK SUITE STATES ---
   const [isMaverickMember, setIsMaverickMember] = useState<boolean>(false);
+  
+  // --- PRO LICENSE & MONETIZATION HUB STATES ---
+  const [showProPaywallModal, setShowProPaywallModal] = useState<boolean>(false);
+  const [inputLicenseKey, setInputLicenseKey] = useState<string>("");
+  const [licenseError, setLicenseError] = useState<string | null>(null);
+  const [licenseSuccess, setLicenseSuccess] = useState<boolean>(false);
+  const [generatorClientSeed, setGeneratorClientSeed] = useState<string>("");
+  const [generatedLicenceResult, setGeneratedLicenceResult] = useState<string>("");
+
   const [screenplaySelectedChapterIdx, setScreenplaySelectedChapterIdx] = useState<number>(0);
   const [isConvertingScreenplay, setIsConvertingScreenplay] = useState<boolean>(false);
   const [generatedScreenplayText, setGeneratedScreenplayText] = useState<string>("");
@@ -724,7 +745,50 @@ export default function App() {
       }
     };
     trackAndInit();
+
+    // Auto-open Guiautor AI after 1.5 seconds to retain the visitor and explain the suite
+    const timer = setTimeout(() => {
+      setIsDagramitoOpen(true);
+      setDagramitoHasUnread(false);
+      // Play a soft welcome chime using Web Speech Synthesis if enabled, introducing the helper
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        // Welcome message
+        setTimeout(() => {
+          speakHelper("¡Hola! Bienvenido a Hostiasoft Diagrammers. Estoy listo para guiarte en tu diseño de libros.");
+        }, 800);
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
   }, []);
+
+  // Reactive Onboarding Progress Tracker
+  useEffect(() => {
+    setOnboardingStepCompleted(prev => {
+      const updated = { ...prev };
+      
+      // 1. Manuscript loaded check (Quijote template or customized)
+      if (chapters && chapters.length > 0 && chapters[0]?.paragraphs?.length > 0) {
+        // Mark true if updated or at least loaded
+        updated.manuscript = true;
+      }
+      
+      // 2. Formatting or Archetype Selected check
+      if (styleSettings && (styleSettings.fontTitle !== "Cinzel" || styleSettings.fontSizeBody !== "medium" || styleSettings.archetype !== "medieval")) {
+        updated.archetype = true;
+      }
+
+      // 4. Voice generated or checked
+      if (clonedVoices && clonedVoices.length > 2) {
+        // Default indices have default voices
+        if (onboardingStepCompleted.voice) {
+          updated.voice = true;
+        }
+      }
+      
+      return JSON.stringify(updated) === JSON.stringify(prev) ? prev : updated;
+    });
+  }, [chapters, styleSettings, clonedVoices]);
 
   const fetchAnalytics = async () => {
     setIsLoadingAnalytics(true);
@@ -893,8 +957,13 @@ export default function App() {
   useEffect(() => {
     // Load from local storage if exists
     const storedMeta = localStorage.getItem("editorial_meta");
+    const storedMaverick = localStorage.getItem("is_maverick_member");
+    if (storedMaverick === "true") {
+      setIsMaverickMember(true);
+    }
     const storedStyle = localStorage.getItem("editorial_style");
     const storedChapters = localStorage.getItem("editorial_chapters");
+    const storedTrimSize = localStorage.getItem("editorial_trim_size");
     const storedCustomPubs = localStorage.getItem("outreach_custom_publishers");
     const storedStatuses = localStorage.getItem("outreach_statuses");
     const storedNotes = localStorage.getItem("outreach_notes");
@@ -911,10 +980,30 @@ export default function App() {
       } catch(e) {}
     }
     if (storedStyle) {
-      try { setStyleSettings(JSON.parse(storedStyle)); } catch(e) {}
+      try {
+        const parsed = JSON.parse(storedStyle);
+        if (parsed && typeof parsed === "object") {
+          setStyleSettings({
+            ...ARCHETYPES.classic,
+            ...parsed
+          });
+        }
+      } catch(e) {}
     }
     if (storedChapters) {
-      try { setChapters(JSON.parse(storedChapters)); } catch(e) {}
+      try {
+        const parsed = JSON.parse(storedChapters);
+        if (Array.isArray(parsed)) {
+          setChapters(parsed);
+        }
+      } catch(e) {}
+    }
+    if (storedTrimSize) {
+      if (["6in_9in", "5.5in_8.5in", "5in_8in", "7in_10in", "8.5in_11in"].includes(storedTrimSize)) {
+        setKdpTrimSize(storedTrimSize as any);
+      } else {
+        setKdpTrimSize("6in_9in");
+      }
     }
     if (storedCustomPubs) {
       try { setCustomPublishers(JSON.parse(storedCustomPubs)); } catch(e) {}
@@ -941,11 +1030,13 @@ export default function App() {
     newStatuses = publisherStatuses,
     newNotes = publisherNotes,
     newPitches = generatedPitches,
-    newSynopsis = synopsisText
+    newSynopsis = synopsisText,
+    newTrimSize = kdpTrimSize
   ) => {
     localStorage.setItem("editorial_meta", JSON.stringify(newMeta));
     localStorage.setItem("editorial_style", JSON.stringify(newStyle));
     localStorage.setItem("editorial_chapters", JSON.stringify(newChaps));
+    localStorage.setItem("editorial_trim_size", newTrimSize);
     localStorage.setItem("outreach_custom_publishers", JSON.stringify(newCustomPubs));
     localStorage.setItem("outreach_statuses", JSON.stringify(newStatuses));
     localStorage.setItem("outreach_notes", JSON.stringify(newNotes));
@@ -1136,6 +1227,94 @@ export default function App() {
     }
   };
 
+  const executeAgenticActions = (actions: any[]) => {
+    if (!actions || !Array.isArray(actions) || actions.length === 0) return;
+
+    actions.forEach(action => {
+      const { type, payload } = action;
+      if (!type || !payload) return;
+
+      switch (type) {
+        case "SET_STYLE":
+          setStyleSettings(prev => {
+            const updated = { ...prev, ...payload };
+            // Auto update font styles or margins
+            let styleInfo = [];
+            if (payload.fontTitle) styleInfo.push(`Títulos: ${payload.fontTitle}`);
+            if (payload.fontBody) styleInfo.push(`Cuerpo: ${payload.fontBody}`);
+            if (payload.pageColor) styleInfo.push(`Papel: ${payload.pageColor}`);
+            if (payload.marginSize) styleInfo.push(`Márgenes: ${payload.marginSize}`);
+            triggerStudioToast(`¡Estética re-maquetada por IA! ${styleInfo.join(", ")}`, "success");
+            setTimeout(() => {
+              saveToLocalStorage(metadata, updated, chapters);
+            }, 50);
+            return updated;
+          });
+          break;
+
+        case "SET_TAB":
+          if (payload.tab) {
+            setActiveTab(payload.tab);
+            triggerStudioToast(`Abriendo módulo de "${payload.tab}" por comando de IA`, "info");
+          }
+          break;
+
+        case "ADD_CHAPTER":
+          if (payload.title && payload.paragraphs) {
+            const nextChNum = chapters.length + 1;
+            const newCh = {
+              chapterNumber: nextChNum,
+              title: payload.title,
+              paragraphs: payload.paragraphs
+            };
+            setChapters(prev => {
+              const updated = [...prev, newCh];
+              setTimeout(() => {
+                saveToLocalStorage(metadata, styleSettings, updated);
+              }, 50);
+              return updated;
+            });
+            triggerStudioToast(`¡Añadido Capítulo ${nextChNum}: "${payload.title}" por comando de IA!`, "success");
+          }
+          break;
+
+        case "SET_LANGUAGE":
+          if (payload.language) {
+            setLanguage(payload.language);
+            triggerStudioToast(`Idioma cambiado a: ${payload.language}`, "info");
+          }
+          break;
+
+        case "SET_TRIM_SIZE":
+          if (payload.trimSize) {
+            setKdpTrimSize(payload.trimSize);
+            const labelMap: Record<string, string> = {
+              "6in_9in": 'Novela Estándar KDP (6"x9")',
+              "5.5in_8.5in": 'Debolsillo íntimo (5.5"x8.5")',
+              "5in_8in": 'Bolsillo Compacto (5"x8")',
+              "7in_10in": 'Manual Ilustrado (7"x10")',
+              "8.5in_11in": 'Carta Grande (8.5"x11")'
+            };
+            triggerStudioToast(`Lienzo reconfigurado en guías físicas: ${labelMap[payload.trimSize] || payload.trimSize}`, "success");
+            setTimeout(() => {
+              saveToLocalStorage(metadata, styleSettings, chapters, customPublishers, publisherStatuses, publisherNotes, generatedPitches, synopsisText, payload.trimSize);
+            }, 50);
+          }
+          break;
+
+        case "TRIGGER_PRINT":
+          triggerStudioToast("Compaginando y abriendo libro en formato oficial PDF...", "success");
+          setTimeout(() => {
+            handlePrint();
+          }, 1000);
+          break;
+
+        default:
+          console.warn("Unrecognized agentic action type:", type);
+      }
+    });
+  };
+
   const sendDagramitoQuery = async (queryText: string) => {
     if (dagramitoIsTyping) return;
     setDagramitoIsTyping(true);
@@ -1167,6 +1346,11 @@ export default function App() {
         ...prev,
         { role: "assistant" as const, content: replyText }
       ]);
+      
+      // Reactive agent actions execution
+      if (data.actions && data.actions.length > 0) {
+        executeAgenticActions(data.actions);
+      }
       
       if (voiceActiveRef.current) {
         speakHelper(replyText);
@@ -2420,6 +2604,13 @@ export default function App() {
   };
 
   const triggerFileDownload = (content: string, filename: string, mimeType: string, bypassDonation = false) => {
+    // Strict paywall checks first
+    if (metadata.strictPaywallActive && !isMaverickMember && !bypassDonation) {
+      setPendingDownload({ content, filename, mimeType });
+      setShowProPaywallModal(true);
+      return;
+    }
+
     if (metadata.donationActive && metadata.donationLink && !bypassDonation) {
       setPendingDownload({ content, filename, mimeType });
       setShowDonationPromptModal(true);
@@ -2488,6 +2679,53 @@ export default function App() {
         alert("No se pudo iniciar la descarga. Por favor, copia el texto del manuscrito directamente desde la pantalla de edición.");
       }
     }
+  };
+
+  const verifyLicenseKey = (key: string): boolean => {
+    if (!key) return false;
+    const cleanKey = key.trim().toUpperCase();
+    
+    const masterCodes = [
+      "DIAGRAMMERS-PRO-99",
+      "VIP-EDITORIAL-2026",
+      "AUTOR-MAESTRO-KDP",
+      "CRAFT-GOLD-BOOK",
+      "CREATIVO-PRO-2026",
+      "MONETIZA-DIAGRAMMERS",
+      "PRO-EDICION-LIMITADA"
+    ];
+    if (masterCodes.includes(cleanKey)) return true;
+    
+    const regex = /^DIAG-[0-9]{4}-[0-9]{4}-[0-9]{4}$/;
+    if (regex.test(cleanKey)) {
+      const digitsOnly = cleanKey.replace(/[^0-9]/g, "");
+      let sum = 0;
+      for (let i = 0; i < digitsOnly.length; i++) {
+        sum += parseInt(digitsOnly[i], 10);
+      }
+      if (sum === 26) return true;
+    }
+    
+    return false;
+  };
+
+  const generateLicenceKeyForClient = (seed: string): string => {
+    let digits = Array(12).fill(0);
+    let currentSum = 0;
+    
+    for (let i = 0; i < 11; i++) {
+      const maxPossible = Math.min(9, 26 - currentSum);
+      if (maxPossible <= 0) break;
+      const rand = Math.floor(Math.random() * maxPossible);
+      digits[i] = rand;
+      currentSum += rand;
+    }
+    digits[11] = 26 - currentSum;
+    
+    digits.sort(() => Math.random() - 0.5);
+    
+    const dStr = digits.join("");
+    return `DIAG-${dStr.substring(0, 4)}-${dStr.substring(4, 8)}-${dStr.substring(8, 12)}`;
   };
 
   const exportInDesignHTML = () => {
@@ -4563,160 +4801,294 @@ ${generatedScreenplayText}
         {/* LEFT WORKSPACE: SIDEBAR PANEL SECTION (Hidden on print) */}
         <aside id="workspace-sidebar" className="no-print w-full lg:w-[480px] border-r border-slate-800 bg-slate-950/80 flex flex-col shrink-0 overflow-y-auto">
           
-          {/* Main Module Tabs selector (Redesigned with beautiful, legible, wide icons, organized explicitly as asked) */}
-          <div className="grid grid-cols-4 border-b border-slate-800 bg-slate-950 sticky top-0 z-20 font-sans">
-            {/* Button 1: Estilos */}
-            <button
-              onClick={() => setActiveTab("preset")}
-              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
-                activeTab === "preset"
-                  ? "border-cyan-500 text-cyan-400 bg-cyan-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
-              }`}
-              title="Estilos de Diseño Editorial por Inteligencia Artificial (Sugerencias de Estilo)"
-            >
-              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "preset" ? "bg-cyan-500/10" : ""}`}>
-                <Sparkles className={`w-5.5 h-5.5 shrink-0 ${activeTab === "preset" ? "text-cyan-400" : "text-slate-400"}`} />
-              </div>
-              <span className="text-[9.5px] tracking-tight text-center truncate w-full">Estilo</span>
-            </button>
-
-            {/* Button 2: Maqueta */}
-            <button
-              onClick={() => setActiveTab("manual")}
-              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
-                activeTab === "manual"
-                  ? "border-fuchsia-500 text-fuchsia-400 bg-fuchsia-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
-              }`}
-              title="Márgenes, Sangrías y Maquetación Física"
-            >
-              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "manual" ? "bg-fuchsia-500/10" : ""}`}>
-                <Sliders className={`w-5.5 h-5.5 shrink-0 ${activeTab === "manual" ? "text-fuchsia-400" : "text-slate-400"}`} />
-              </div>
-              <span className="text-[9.5px] tracking-tight text-center truncate w-full">Maqueta</span>
-            </button>
-
-            {/* Button 3: Texto */}
-            <button
-              onClick={() => setActiveTab("content")}
-              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
-                activeTab === "content"
-                  ? "border-orange-500 text-orange-400 bg-orange-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
-              }`}
-              title="Carga de Texto y Edición del Manuscrito"
-            >
-              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "content" ? "bg-orange-500/10" : ""}`}>
-                <FileText className={`w-5.5 h-5.5 shrink-0 ${activeTab === "content" ? "text-orange-400" : "text-slate-400"}`} />
-              </div>
-              <span className="text-[9.5px] tracking-tight text-center truncate w-full">Texto</span>
-            </button>
-
-            {/* Button 4: Imprenta / KDP */}
-            <button
-              onClick={() => setActiveTab("compatibility")}
-              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
-                activeTab === "compatibility"
-                  ? "border-amber-500 text-amber-400 bg-amber-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
-              }`}
-              title="Esquemas de Imprenta y Compatibilidad KDP"
-            >
-              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "compatibility" ? "bg-amber-500/10" : ""}`}>
-                <Printer className={`w-5.5 h-5.5 shrink-0 ${activeTab === "compatibility" ? "text-amber-400" : "text-slate-400"}`} />
-              </div>
-              <span className="text-[9.5px] tracking-tight text-center truncate w-full">Imprenta</span>
-            </button>
-
-            {/* Button 5: Derechos */}
-            <button
-              onClick={() => setActiveTab("copyright")}
-              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
-                activeTab === "copyright"
-                  ? "border-emerald-500 text-emerald-400 bg-emerald-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
-              }`}
-              title="Derechos de Autor e ISBN KDP"
-            >
-              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "copyright" ? "bg-emerald-500/10" : ""}`}>
-                <ShieldCheck className={`w-5.5 h-5.5 shrink-0 ${activeTab === "copyright" ? "text-emerald-400" : "text-slate-400"}`} />
-              </div>
-              <span className="text-[9.5px] tracking-tight text-center truncate w-full">Derechos</span>
-            </button>
-
-            {/* Button 6: Editores */}
-            <button
-              onClick={() => setActiveTab("pitch")}
-              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
-                activeTab === "pitch"
-                  ? "border-blue-500 text-blue-400 bg-blue-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
-              }`}
-              title="Prospección y Contacto de Editoriales"
-            >
-              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "pitch" ? "bg-blue-500/10" : ""}`}>
-                <TrendingUp className={`w-5.5 h-5.5 shrink-0 ${activeTab === "pitch" ? "text-blue-400" : "text-slate-400"}`} />
-              </div>
-              <span className="text-[9.5px] tracking-tight text-center truncate w-full">Editores</span>
-            </button>
-
-            {/* Button 7: Voz & Audio */}
-            <button
-              onClick={() => setActiveTab("multimedia")}
-              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
-                activeTab === "multimedia"
-                  ? "border-purple-500 text-purple-400 bg-purple-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
-              }`}
-              title="Voz Clonada con IA y Soundtrack"
-            >
-              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "multimedia" ? "bg-purple-500/10" : ""}`}>
-                <Headphones className={`w-5.5 h-5.5 shrink-0 ${activeTab === "multimedia" ? "text-purple-400" : "text-slate-400"}`} />
-              </div>
-              <span className="text-[9.5px] tracking-tight text-center truncate w-full">Voz/Audio</span>
-            </button>
-
-            {/* Button 8: Guión MAV */}
-            <button
-              onClick={() => setActiveTab("screenplay")}
-              className={`py-3.5 px-0.5 text-[10px] font-extrabold uppercase tracking-wider border-b-2 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer relative group ${
-                activeTab === "screenplay"
-                  ? "border-rose-500 text-rose-450 bg-rose-500/5"
-                  : "border-transparent text-slate-400 hover:text-slate-100 hover:bg-slate-900"
-              }`}
-              title="Guión Cinematográfico MAVERICK PREMIUM"
-            >
-              <div className={`p-1 rounded-lg transition-transform duration-200 group-hover:scale-110 ${activeTab === "screenplay" ? "bg-rose-500/10" : ""}`}>
-                <Clapperboard className={`w-5.5 h-5.5 shrink-0 animate-pulse ${activeTab === "screenplay" ? "text-rose-400" : "text-slate-400"}`} />
-              </div>
-              <span className="text-[9.5px] tracking-tight text-center truncate w-full flex items-center justify-center gap-0.5">
-                <span>Guión</span>
-                <span className="text-[7px] bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold px-1 py-0.2 rounded scale-90">MAV</span>
-              </span>
-            </button>
-          </div>
-
-          <div className="p-6 space-y-6 flex-1">
-            
-            {/* Aviso de subida de manuscrito */}
-            {activeTab !== "content" && (
-              <div 
-                onClick={() => setActiveTab("content")}
-                className="bg-gradient-to-r from-amber-500/10 to-transparent border-l-4 border-amber-500 p-3.5 rounded-r-xl cursor-pointer hover:bg-amber-500/15 transition-all flex items-start gap-3 group animate-pulse"
-              >
-                <div className="bg-amber-500 text-slate-950 p-1.5 rounded shrink-0">
-                  <Download className="w-4 h-4 animate-bounce" />
+          {/* Sticky Header Containing Guiautor AI */}
+          <div className="sticky top-0 z-30 bg-slate-950 border-b border-slate-800/80 p-4 shrink-0">
+            <div className="flex items-center justify-between font-sans">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 bg-gradient-to-tr from-amber-500 via-amber-600 to-yellow-400 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/10 shrink-0">
+                  <span className="text-lg">🧠</span>
                 </div>
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold text-amber-400 block group-hover:underline">¿Listo para maquetar tu propio libro?</span>
-                  <p className="text-[10px] text-slate-300 leading-normal">
-                    Haz clic aquí para ir a la pestaña <strong className="text-amber-300 font-bold">"Texto/IA"</strong> y subir tu archivo original (.docx, .txt, etc.).
+                <div>
+                  <h3 className="text-xs font-black uppercase text-white font-mono tracking-widest leading-none">DIAGRAMMERS</h3>
+                  <p className="text-[10px] text-amber-400 font-extrabold uppercase tracking-wider font-mono mt-0.5 flex items-center gap-1.5">
+                    <span className="relative flex h-1.5 w-1.5 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500 animate-pulse"></span>
+                    </span>
+                    <span>Guiautor IA Activado</span>
                   </p>
                 </div>
               </div>
-            )}
+              <div className="text-right">
+                <span className="text-[8.5px] bg-slate-900 border border-slate-800 text-slate-400 font-bold px-2 py-0.5 rounded font-mono uppercase">
+                  v2.8 Master
+                </span>
+              </div>
+            </div>
+          </div>
+
+        {/* Sidebar Inner Area */}
+        <div className="p-3.5 flex flex-col flex-1 min-h-0 space-y-4">
+          
+          {/* Interactive Editorial Stepper: Always visible, extremely clean */}
+          <div className="bg-slate-950/85 border border-slate-850/85 rounded-xl p-3 shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-amber-500 animate-pulse shrink-0" />
+                <span className="text-[10.5px] font-black uppercase text-amber-300 font-mono tracking-wider">Ruta Editorial Paso a Paso</span>
+              </div>
+              <span className="text-[8px] bg-slate-900 border border-slate-800 text-emerald-400 font-bold px-1.5 py-0.2 rounded font-mono">
+                {Number(chapters.length > 0) + Number(kdpTrimSize !== "6in_9in") + Number(!!metadata.isbn) + Number(!!metadata.copyrightType && metadata.copyrightType !== "ninguno") + 1}/5 COMPLETO
+              </span>
+            </div>
             
+            <div className="grid grid-cols-5 gap-1 pt-1 font-sans">
+              {[
+                { label: "Borrador", query: "Por favor, infórmame sobre la fase de Borrador y cómo cargar o iniciar la creación de mi libro.", finished: chapters.length > 0 },
+                { label: "Formato", query: "Recomiéndame las mejores tendencias editoriales en cuanto a margenes, letras y papel.", finished: kdpTrimSize !== "6in_9in" },
+                { label: "Ortotipia", query: "Explícame las reglas de la RAE respecto al uso de las rayas de diálogo (—) para narrativa.", finished: true },
+                { label: "Derechos", query: "Guíame sobre el registro de propiedad intelectual en Safe Creative y el código ISBN.", finished: !!metadata.isbn || (!!metadata.copyrightType && metadata.copyrightType !== "ninguno") },
+                { label: "Lanzar KDP", query: "Explícame el paso final: cómo compaginar y subir mi libro a Amazon KDP con éxito.", finished: false }
+              ].map((step, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => sendDagramitoQuery(step.query)}
+                  className={`py-1 px-0.5 rounded text-[9.5px] font-bold text-center border transition-all cursor-pointer truncate flex flex-col items-center justify-center ${
+                    step.finished
+                      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 shadow-sm"
+                      : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700"
+                  }`}
+                  title={step.query}
+                >
+                  <span className="text-[9px] mb-0.5 font-sans leading-none">{step.finished ? "✓" : idx + 1}</span>
+                  <span className="text-[7.5px] tracking-tight truncate uppercase font-mono block w-full">{step.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Core Manuscript Controller & Drag-and-Drop Local File Uploader */}
+          <div className="bg-slate-950/85 border border-slate-850/85 rounded-xl p-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase text-slate-300 font-mono tracking-wider flex items-center gap-1.5">
+                <span>📂</span> Manuscrito de Autor
+              </span>
+              <span className="text-[8px] font-mono text-slate-500 bg-slate-900 border border-slate-800 px-1.5 py-0.2 rounded">
+                TXT / DOCX / MD
+              </span>
+            </div>
+
+            {/* Drag & Drop Zone */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const files = e.dataTransfer.files;
+                if (files && files.length > 0) {
+                  const file = files[0];
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    const text = event.target?.result as string;
+                    if (text) {
+                      const lines = text.split("\n").filter(l => l.trim().length > 0);
+                      setChapters([
+                        {
+                          chapterNumber: 1,
+                          title: file.name.replace(/\.[^/.]+$/, ""),
+                          paragraphs: lines.slice(0, 15)
+                        }
+                      ]);
+                      triggerStudioToast(`¡Manuscrito '${file.name}' leído e incorporado!`, "success");
+                      sendDagramitoQuery(`He subido mi archivo '${file.name}'. Por favor, ayúdame a maquetarlo.`);
+                    }
+                  };
+                  reader.readAsText(file);
+                }
+              }}
+              className="border border-dashed border-slate-800 hover:border-amber-500/40 bg-slate-900/40 hover:bg-slate-900/80 rounded-lg p-2.5 text-center transition-all cursor-pointer group flex flex-col items-center justify-center gap-1"
+            >
+              <Download className="w-4 h-4 text-slate-500 group-hover:text-amber-400 group-hover:scale-110 transition-all shrink-0" />
+              <div className="text-[9.5px] text-slate-400">
+                Arrastra tu manuscrito aquí o haz clic para subir
+              </div>
+              <input
+                type="file"
+                accept=".txt,.md,.docx"
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files && files.length > 0) {
+                    const file = files[0];
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const text = event.target?.result as string;
+                      if (text) {
+                        const lines = text.split("\n").filter(l => l.trim().length > 0);
+                        setChapters([
+                          {
+                            chapterNumber: 1,
+                            title: file.name.replace(/\.[^/.]+$/, ""),
+                            paragraphs: lines.slice(0, 15)
+                          }
+                        ]);
+                        triggerStudioToast(`¡Manuscrito '${file.name}' leído e incorporado!`, "success");
+                        sendDagramitoQuery(`He subido mi archivo '${file.name}'. Por favor, ayúdame a maquetarlo.`);
+                      }
+                    };
+                    reader.readAsText(file);
+                  }
+                }}
+                className="hidden"
+                id="sidebar-file-picker"
+              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  document.getElementById("sidebar-file-picker")?.click();
+                }}
+                className="text-[8.5px] font-bold text-amber-400 hover:underline hover:scale-103 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded transition-colors cursor-pointer mt-0.5"
+              >
+                Buscar archivo
+              </button>
+            </div>
+
+            {/* Quick Presets / Cloud Tools */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setChapters([
+                    {
+                      chapterNumber: 1,
+                      title: "Capítulo Primero: Que trata de la condición y ejercicio del famoso hidalgo don Quijote de la Mancha",
+                      paragraphs: [
+                        "En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor. Una olla de algo más vaca que carnero, salpicón las más noches, duelos y quebrantos los sábados, lantejas los viernes, algún palomino de añadidura los domingos, consumían las tres partes de su hacienda.",
+                        "El resto della concluían sayo de velarte, calzas de velludo para las fiestas, con sus pantuflos de lo mesmo, y los días de entresemana se honraba con su vellorí de lo más fino. Tenía en su casa una ama que pasaba de los cuarenta, y una sobrina que no llegaba a los veinte, y un mozo de campo y plaza, que así ensillaba el rocín como tomaba la podadera."
+                      ]
+                    }
+                  ]);
+                  triggerStudioToast("¡Manuscrito de prueba cargado con éxito!", "success");
+                  sendDagramitoQuery("¿Cómo estructuro el libro de prueba?");
+                }}
+                className="flex-1 bg-slate-900 hover:bg-amber-500 hover:text-slate-950 border border-slate-800 hover:border-amber-500 font-bold text-[9px] py-1.5 px-0.5 rounded-lg transition-all cursor-pointer text-center font-mono"
+              >
+                📚 Demo Quijote
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDriveModal(true);
+                }}
+                className="flex-1 bg-slate-900 hover:bg-emerald-500 hover:text-slate-950 border border-slate-800 hover:border-emerald-500 font-bold text-[9px] py-1.5 px-0.5 rounded-lg transition-all cursor-pointer text-center font-mono"
+              >
+                ☁️ Conectar Drive
+              </button>
+            </div>
+          </div>
+          {/* Guiautor IA Active Agent Chat Module Container */}
+          <div className="flex-1 border border-slate-800/80 bg-slate-950/85 rounded-xl overflow-hidden p-3 shadow-inner text-left flex flex-col min-h-[400px] space-y-2.5">
+            {/* Scrollable messages container inside the sidebar */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-3 flex flex-col min-h-0 text-left">
+              {dagramitoMessages.map((msg, idx) => (
+                <div key={idx} className={`flex gap-2 max-w-[92%] ${msg.role === "user" ? "self-end justify-end flex-row-reverse" : "self-start"}`}>
+                  {msg.role === "assistant" && (
+                    <div className="flex flex-col items-center gap-1 text-slate-500 shrink-0 self-start">
+                      <div className="w-5.5 h-5.5 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-center text-xs select-none animate-pulse">
+                        🧠
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => speakHelper(msg.content)}
+                        className="p-1 hover:bg-slate-800 hover:text-amber-400 rounded transition-colors cursor-pointer"
+                        title="Escuchar respuesta"
+                      >
+                        <Volume2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex-1 flex flex-col gap-1">
+                    <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${
+                      msg.role === "user" 
+                        ? "bg-amber-500 text-slate-950 font-medium rounded-br-none border border-amber-400/20 font-sans shadow"
+                        : "bg-slate-900 border border-slate-850 text-slate-200 rounded-tl-none select-text space-y-1 block font-sans"
+                    }`}>
+                      {msg.role === "user" ? (
+                        msg.content
+                      ) : (
+                        parseDagramitoMarkdown(msg.content)
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Typing Loader Indicator */}
+              {dagramitoIsTyping && (
+                <div className="flex gap-1.5 items-center self-start pl-1 text-slate-500 font-mono text-[9px]">
+                  <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping shrink-0" />
+                  <span>Guiautor está redactando vuestro pliego...</span>
+                </div>
+              )}
+              
+              {/* Keep chat scrolled to bottom tool */}
+              <div ref={dagramitoEndRef} />
+            </div>
+
+            {/* Suggested Pills shortcut row for faster control click */}
+            <div className="flex flex-wrap gap-1 pt-1 border-t border-slate-850/60 justify-start shrink-0">
+              {[
+                { text: "Poner tamaño 6x9 estándar", icon: "📐" },
+                { text: "Cambiar papel a color sepia", icon: "🍂" },
+                { text: "Activar capitulares artísticas", icon: "❦" },
+                { text: "Imprimir / Ver PDF Compaginado", icon: "🖨️" }
+              ].map((pill, id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => sendDagramitoQuery(pill.text)}
+                  disabled={dagramitoIsTyping}
+                  className="bg-slate-900 hover:bg-slate-850 disabled:opacity-40 border border-slate-850 hover:border-slate-800 text-slate-350 hover:text-white px-1.5 py-0.5 rounded-lg text-[9px] cursor-pointer transition-colors text-left flex items-center gap-0.5 font-mono"
+                >
+                  <span>{pill.icon}</span> {pill.text}
+                </button>
+              ))}
+            </div>
+
+            {/* Form submit footer inside the sidebar container */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!dagramitoInput.trim() || dagramitoIsTyping) return;
+                sendDagramitoQuery(dagramitoInput);
+                setDagramitoInput("");
+              }}
+              className="flex gap-1.5 pt-1.5 border-t border-slate-850/80 shrink-0"
+            >
+              <input
+                type="text"
+                value={dagramitoInput}
+                onChange={(e) => setDagramitoInput(e.target.value)}
+                placeholder="Escríbele a Guiautor..."
+                disabled={dagramitoIsTyping}
+                className="flex-1 bg-slate-900 border border-slate-800 focus:border-amber-500/50 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/30 font-sans"
+              />
+              <button
+                type="submit"
+                disabled={!dagramitoInput.trim() || dagramitoIsTyping}
+                className="bg-amber-500 hover:bg-amber-400 disabled:opacity-30 disabled:hover:bg-amber-500 text-slate-950 p-1.5 rounded-xl cursor-pointer transition-colors shrink-0 flex items-center justify-center font-bold animate-pulse"
+                title="Enviar pregunta"
+              >
+                <Send className="w-3.5 h-3.5 stroke-[2.5]" />
+              </button>
+            </form>
+          </div>
+
             {/* TAB 1: PREDEFINED LAYOUT PRESETS & AI ANALYZER */}
             {activeTab === "preset" && (
               <div className="space-y-6 animate-fadeIn">
@@ -7210,6 +7582,117 @@ ${generatedScreenplayText}
                   </div>
                 </div>
 
+                {/* 💳 SISTEMA DE MONETIZACIÓN PRO Y ACTIVACIÓN DE LICENCIAS (ADMIN PANEL) */}
+                <div className="bg-slate-900 border border-indigo-900/40 rounded-xl p-5 space-y-4 shadow-lg relative overflow-hidden">
+                  <div className="absolute top-0 right-0 bg-gradient-to-l from-indigo-500/10 to-transparent w-full h-full pointer-events-none"></div>
+                  
+                  <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                    <Crown className="w-5 h-5 text-indigo-400 shrink-0" />
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                        💳 Sistema Comercial Pro y Paywall Estricto — ¡Excelente para monetizar!
+                      </h4>
+                      <p className="text-[10px] text-slate-500">
+                        Configura un muro de pago para cobrar una tarifa fija o recurrente por el uso de tu Suite de maquetación profesional.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 space-y-4">
+                      <div className="flex items-center justify-between p-3 bg-slate-950 border border-slate-850 rounded-lg">
+                        <div>
+                          <p className="text-xs font-bold text-slate-200">Activar Paywall Estricto (Licencias Requeridas)</p>
+                          <p className="text-[10px] text-slate-500">Bloquea todas las descargas del libro KDP y pide un código de activación Pro.</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer select-none">
+                          <input 
+                            type="checkbox" 
+                            checked={!!metadata.strictPaywallActive} 
+                            onChange={(e) => {
+                              const updated = { ...metadata, strictPaywallActive: e.target.checked };
+                              setMetadata(updated);
+                              saveToLocalStorage(updated, styleSettings, chapters);
+                            }}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500 peer-checked:after:bg-slate-950 peer-checked:after:border-indigo-500"></div>
+                        </label>
+                      </div>
+
+                      {/* KEY GENERATOR TOOL */}
+                      <div className="p-4 bg-slate-950/80 border border-slate-850 rounded-xl space-y-3">
+                        <div>
+                          <span className="text-[8.5px] font-black uppercase text-indigo-400 tracking-wider">Herramienta de Control Interno (Creador)</span>
+                          <h5 className="text-xs font-bold text-slate-300">Generador de Claves Pro para Clientes</h5>
+                          <p className="text-[9.5px] text-slate-500">Genera una clave y envíala a tus clientes una vez realicen el pago en PayPal, MercadoPago o Bizum.</p>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <input 
+                            type="text"
+                            value={generatorClientSeed}
+                            onChange={(e) => setGeneratorClientSeed(e.target.value)}
+                            placeholder="Email o Nombre del comprador (Ej: jose@correo.com)"
+                            className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 flex-1 font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!generatorClientSeed.trim()) {
+                                alert("Por favor ingresa un email o identificador para el cliente.");
+                                return;
+                              }
+                              const key = generateLicenceKeyForClient(generatorClientSeed);
+                              setGeneratedLicenceResult(key);
+                            }}
+                            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs tracking-wider cursor-pointer transition-all active:scale-95 shrink-0"
+                          >
+                            Generar Clave Pro
+                          </button>
+                        </div>
+
+                        {generatedLicenceResult && (
+                          <div className="bg-indigo-950/20 border border-indigo-500/30 p-2.5 rounded-lg flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <span className="text-[9px] uppercase tracking-wider text-indigo-400 font-bold block">Llave Pro Generada con Éxito:</span>
+                              <span className="text-xs text-slate-100 font-mono font-black tracking-widest">{generatedLicenceResult}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(generatedLicenceResult);
+                                alert("¡Clave copiada al portapapeles!");
+                              }}
+                              className="text-[10px] hover:text-white bg-slate-900 hover:bg-slate-850 p-1 px-2.5 rounded border border-slate-800 font-mono text-indigo-300 cursor-pointer"
+                            >
+                              Copiar Clave
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="lg:col-span-1 bg-indigo-500/5 border border-indigo-500/15 rounded-xl p-4 flex flex-col justify-between text-left space-y-3">
+                      <div className="space-y-1">
+                        <span className="text-[8.5px] font-bold text-indigo-400 tracking-widest uppercase font-mono block">Cómo cobrar hoy</span>
+                        <h5 className="text-xs font-bold text-slate-200 font-sans">Comienza con Coste Cero</h5>
+                      </div>
+                      <p className="text-[9.5px] text-slate-400 leading-relaxed font-sans">
+                        Comparte el link de tu app. Cuando tus usuarios quieran descargar su libro, verán el muro con tu enlace. Te pagan de forma directa y tú les facilitas el código generado aquí mismo. ¡Sin gastos técnicos de pasarelas complejas!
+                      </p>
+                      <div className="border-t border-slate-800/60 pt-2 text-[9.5px] text-slate-400 space-y-1">
+                        <span className="font-bold text-slate-300 block">Códigos Maestros siempre activos:</span>
+                        <div className="font-mono text-[9px] text-indigo-300/90 leading-tight space-y-0.5 max-h-16 overflow-y-auto">
+                          <div>CREATIVO-PRO-2026</div>
+                          <div>VIP-EDITORIAL-2026</div>
+                          <div>DIAGRAMMERS-PRO-99</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* SECTION 3: LAW LICENSE CONFIGURATOR */}
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-lg">
                   <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
@@ -8198,7 +8681,9 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                     <button
                       type="button"
                       onClick={() => {
-                        setIsMaverickMember(!isMaverickMember);
+                        const nextVal = !isMaverickMember;
+                        setIsMaverickMember(nextVal);
+                        localStorage.setItem("is_maverick_member", nextVal ? "true" : "false");
                         setScreenplayExportDoneMessage(null);
                       }}
                       className={`px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase font-bold cursor-pointer transition-all ${
@@ -10800,6 +11285,145 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
         </div>
       )}
 
+      {/* 💳 MODAL DE BLOQUEO COMERCIAL / PRO PAYWALL (SI STRICT MODE ESTÁ ACTIVO) */}
+      {showProPaywallModal && (
+        <div id="pro-paywall-overlay" className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-950/95 backdrop-blur-lg overflow-y-auto animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-indigo-500/40 rounded-3xl p-6 md:p-8 max-w-lg w-full relative shadow-2xl shadow-indigo-500/10 space-y-6 text-center">
+            
+            {/* Close Button / Voluntary bypass for checking */}
+            <button 
+              onClick={() => {
+                setShowProPaywallModal(false);
+                setPendingDownload(null);
+                setLicenseError(null);
+                setLicenseSuccess(false);
+              }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer text-xs font-mono border border-slate-800 hover:border-slate-700 bg-slate-950 p-1.5 px-3 rounded-xl transition-all font-bold"
+            >
+              ✕ Cancelar
+            </button>
+
+            {/* Glowing Crown Icon */}
+            <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-600 to-pink-500 p-0.5 shadow-2xl shadow-indigo-500/20 flex items-center justify-center relative animate-pulse">
+              <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full"></div>
+              <div className="bg-slate-950 rounded-full w-full h-full flex items-center justify-center">
+                <Crown className="w-10 h-10 text-indigo-400" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold text-indigo-400 tracking-[0.25em] uppercase font-mono block">SUITE EDITORIAL PROFESIONAL</span>
+              <h3 className="text-2xl font-black text-white leading-tight uppercase font-sans tracking-tight">
+                Desbloquear DIAGRAMMERS Pro ⚡
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto font-sans">
+                La descarga del archivo listo para Amazon KDP (<span className="text-emerald-400 font-mono truncate block max-w-xs mx-auto mt-0.5">{pendingDownload?.filename}</span>) y los motores premium de maquetación requieren una Licencia Activa.
+              </p>
+            </div>
+
+            {/* Price Cards Simulation */}
+            <div className="grid grid-cols-2 gap-3 text-left">
+              <div className="bg-slate-950 border border-slate-800 p-3 rounded-2xl relative overflow-hidden">
+                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block font-mono">Plan Autor</span>
+                <span className="text-sm font-black text-white block">US$ 15 / único</span>
+                <p className="text-[9.5px] text-slate-550 mt-1 leading-normal font-sans">Descargas ilimitadas para 1 obra literaria completa.</p>
+              </div>
+              <div className="bg-slate-950 border-2 border-indigo-500/30 p-3 rounded-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-indigo-500 text-slate-950 text-[6px] font-black uppercase px-2 py-0.5 rounded-bl">RECOMENDADO</div>
+                <span className="text-[8px] font-bold text-indigo-400 uppercase tracking-wider block font-mono">Plan Editorial</span>
+                <span className="text-sm font-black text-indigo-300 block">US$ 29 / único</span>
+                <p className="text-[9.5px] text-slate-550 mt-1 leading-normal font-sans">Uso comercial ilimitado para múltiples libros de por vida.</p>
+              </div>
+            </div>
+
+            {/* License Activation Form */}
+            <div className="bg-slate-950 border border-slate-850 rounded-2xl p-4 text-left space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center justify-between font-sans">
+                  <span>Código de Activación Pro</span>
+                  <span className="text-[8px] font-mono text-indigo-450 lowercase">ej: DIAG-XXXX-YYYY-ZZZZ</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={inputLicenseKey}
+                    onChange={(e) => {
+                      setInputLicenseKey(e.target.value);
+                      setLicenseError(null);
+                    }}
+                    placeholder="Pega aquí tu clave de licencia recibida"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono tracking-widest uppercase text-center focus:ring-1 focus:ring-indigo-500"
+                  />
+                  <button
+                    onClick={() => {
+                      if (!inputLicenseKey.trim()) {
+                        setLicenseError("Ingresa tu código de activación.");
+                        return;
+                      }
+                      const isValid = verifyLicenseKey(inputLicenseKey);
+                      if (isValid) {
+                        setLicenseSuccess(true);
+                        setLicenseError(null);
+                        
+                        // Activate user
+                        setIsMaverickMember(true);
+                        localStorage.setItem("is_maverick_member", "true");
+                        
+                        // Proceed to download
+                        setTimeout(() => {
+                          if (pendingDownload) {
+                            triggerFileDownload(pendingDownload.content, pendingDownload.filename, pendingDownload.mimeType, true);
+                          }
+                          setShowProPaywallModal(false);
+                          setLicenseSuccess(false);
+                          setInputLicenseKey("");
+                        }, 1200);
+                      } else {
+                        setLicenseError("Código de activación incorrecto o fórmula vencida. Comprueba los caracteres.");
+                      }
+                    }}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider cursor-pointer transition-all active:scale-95 shrink-0"
+                  >
+                    Activar
+                  </button>
+                </div>
+              </div>
+
+              {licenseError && (
+                <p className="text-[10px] text-red-400 font-medium leading-relaxed font-mono block text-center bg-red-950/10 border border-red-900/20 p-2 rounded-xl">
+                  ⚠ {licenseError}
+                </p>
+              )}
+
+              {licenseSuccess && (
+                <p className="text-[10px] text-emerald-400 font-bold leading-relaxed font-mono block text-center bg-emerald-900/10 border border-emerald-900/20 p-2 rounded-xl">
+                  ✓ ¡Licencia de la Suite de Maquetación Activada! Descargando tu obra...
+                </p>
+              )}
+            </div>
+
+            {/* Support Payment Button */}
+            <div className="space-y-3">
+              <span className="text-[9px] text-slate-500 font-mono block uppercase tracking-wider">¿Aún no tienes un código de licencia?</span>
+              
+              <a 
+                href={metadata.donationLink || "https://paypal.me"}
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white text-center text-xs font-black py-3 px-4 rounded-xl flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-indigo-500/15 no-underline"
+              >
+                <DollarSign className="w-4 h-4 text-white shrink-0" />
+                <span>Adquirir Licencia Pro en Pasarela</span>
+              </a>
+
+              <p className="text-[9px] text-slate-500 leading-normal max-w-sm mx-auto font-sans">
+                Realiza el pago correspondiente en tu pasarela y obtén tu código oficial al instante de manu del administrador. ¡Tu compra impulsa el desarrollo de software independiente libre de regalías y comisionistas!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 1.6. PRE-PRESS & INDESIGN PROFESSIONAL PRINT MODAL */}
       {showPrintPdfModal && (
         <div id="print-prepress-overlay" className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
@@ -11336,15 +11960,84 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                     </div>
                   )}
 
-                  <div className={`p-3 rounded-2xl text-xs leading-relaxed ${
-                    msg.role === "user" 
-                      ? "bg-amber-500 text-slate-950 font-medium rounded-br-none rounded-2xl border border-amber-400/20"
-                      : "bg-slate-800/70 border border-slate-750/30 text-slate-200 rounded-tl-none rounded-2xl select-text space-y-1"
-                  }`}>
-                    {msg.role === "user" ? (
-                      msg.content
-                    ) : (
-                      parseDagramitoMarkdown(msg.content)
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className={`p-3 rounded-2xl text-xs leading-relaxed ${
+                      msg.role === "user" 
+                        ? "bg-amber-500 text-slate-950 font-medium rounded-br-none rounded-2xl border border-amber-400/20"
+                        : "bg-slate-800/70 border border-slate-750/30 text-slate-200 rounded-tl-none rounded-2xl select-text space-y-1"
+                    }`}>
+                      {msg.role === "user" ? (
+                        msg.content
+                      ) : (
+                        parseDagramitoMarkdown(msg.content)
+                      )}
+                    </div>
+                    
+                    {/* Render Quick Actions right under first greeting of assistant */}
+                    {msg.role === "assistant" && idx === 0 && (
+                      <div className="mt-1 space-y-1.5 bg-slate-950/45 p-2 rounded-xl border border-slate-850">
+                        <span className="text-[9px] uppercase font-bold text-slate-450 tracking-wider font-mono block">🎯 Acciones Rápidas del Tutor:</span>
+                        <div className="grid grid-cols-1 gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Reload standard Quijote text & navigate to Content tab
+                              setRawText(TEXT_TEMPLATES[0].text);
+                              setChapters([
+                                {
+                                  chapterNumber: 1,
+                                  title: "De la condición y ejercicio del famoso hidalgo don Quijote de la Mancha",
+                                  paragraphs: [
+                                    "En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor. Una olla de algo más vaca que carnero, salpicón las más noches, duelos y quebrantos los sábados, lantejas los viernes, algún palomino de añadidura los domingos, consumían las tres partes de su hacienda...",
+                                    "Tenía en su casa una ama que pasaba de los cuarenta, y una sobrina que no llegaba a los veinte, y un mozo de campo y plaza, que así ensillaba el rocín como tomaba la podadera. Frisaba la edad de nuestro hidalgo con los cincuenta años; era de complexión recia, seco de carnes, enjuto de rostro, gran madrugador y amigo de la caza."
+                                  ]
+                                }
+                              ]);
+                              setActiveTab("content");
+                              triggerStudioToast("¡Libro de prueba cargado con éxito!", "success");
+                              sendDagramitoQuery("¿Cómo estructuro el libro de prueba?");
+                            }}
+                            className="bg-slate-900 hover:bg-slate-800 text-amber-300 font-bold p-1 px-2 rounded-lg text-[10px] text-left transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-800/80 hover:border-amber-500/30"
+                          >
+                            <span>📘</span> <span>Cargar Manuscrito Demo</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveTab("preset");
+                              sendDagramitoQuery("¿Me explicas cómo usar el Análisis de Estilos por IA?");
+                            }}
+                            className="bg-slate-900 hover:bg-slate-800 text-cyan-400 font-bold p-1 px-2 rounded-lg text-[10px] text-left transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-800/80 hover:border-cyan-500/30"
+                          >
+                            <span>🪄</span> <span>Elegir Estilo & Tipografías KDP</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingChapterIdx(0);
+                              setMobileEditorTab("corrector");
+                              triggerStudioToast("Autocorrección de capítulos para autores.", "info");
+                              sendDagramitoQuery("¿Cómo funciona el Corrector Ortotipográfico RAE?");
+                            }}
+                            className="bg-slate-900 hover:bg-slate-800 text-orange-400 font-bold p-1 px-2 rounded-lg text-[10px] text-left transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-800/80 hover:border-orange-500/30"
+                          >
+                            <span>✍️</span> <span>Abrir Autocorrector Ortográfico</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveTab("multimedia");
+                              sendDagramitoQuery("¿Cómo clono mi voz literaria?");
+                            }}
+                            className="bg-slate-900 hover:bg-slate-800 text-purple-400 font-bold p-1 px-2 rounded-lg text-[10px] text-left transition-colors cursor-pointer flex items-center gap-1.5 border border-slate-800/80 hover:border-purple-500/30"
+                          >
+                            <span>🎙️</span> <span>Probar Clonación de Voz</span>
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </main>

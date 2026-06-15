@@ -53,15 +53,17 @@ async function generateContentWithRetry(params: any, retries = 3, initialDelay =
                           errMsg.includes("UNAVAILABLE") || errMsg.includes("high demand") || 
                           errMsg.includes("overloaded") || errMsg.includes("temporary");
                           
-      console.warn(`[Gemini API] Intento ${attempt}/${retries} fallido con modelo ${currentModel}: ${errMsg}`);
-      
       // Fall back immediately to gemini-3.1-flash-lite for ANY error on gemini-3.5-flash to guarantee ultra-high reliability
       if (currentModel === "gemini-3.5-flash") {
-        console.info(`[Gemini API] Redirigiendo petición del modelo gemini-3.5-flash -> gemini-3.1-flash-lite debido a: ${errMsg}`);
+        console.info(`[Gemini API] Redirigiendo petición del modelo gemini-3.5-flash -> gemini-3.1-flash-lite debido a saturación transitoria (503): ${errMsg}`);
         currentModel = "gemini-3.1-flash-lite";
+        // Reset the attempt count so the fallback model has full retries starting from 0
+        attempt = 0;
         // Re-execute immediately with the fallback model
         continue;
       }
+
+      console.warn(`[Gemini API] Intento ${attempt}/${retries} fallido con modelo ${currentModel}: ${errMsg}`);
 
       if (isTransient && attempt < retries) {
         console.log(`[Gemini API] Detectado error transitorio. Reintentando en ${delay}ms... (Próximo intento: ${attempt + 1})`);
@@ -1165,36 +1167,57 @@ app.post("/api/dagramito-chat", async (req, res) => {
   try {
     const ai = getAI();
     const systemPrompt = `
-Eres Dagramito, el simpático, intelectual y ocurrente patito editor experto (tu avatar es un patito sabio con lentes redondos de escritor, pluma y tintero). Trabajas como el mentor y asistente de maquetación en "DIAGRAMMERS", la suite de software inteligente más prestigiosa para diseño editorial, compaginación literaria y autopublicación.
+Eres GUIAUTOR IA, el Agente Inteligente, mentor literario y Manager Editorial definitivo de "DIAGRAMMERS", la suite de maquetación y diseño de libros más avanzada de Hostiasoft.
 
-Tu misión es recibir las dudas del usuario (autores y editores de muchos años) de manera sumamente respetuosa, cálida y profesional, dándoles consejos que demuestren que conoces el oficio de la edición tanto o más que ellos, pero siempre con un tono cercano, chispeante y motivador. Puedes usar expresiones amables y pequeños toques simpáticos de editor apasionado.
+Tu misión es recibir las inquietudes de los autores de manera sumamente respetuosa, cálida y profesional, guiándolos en cada fase de su proyecto creativo. Actúas como un editor veterano que conoce al dedillo las tendencias de diseño, las pautas de composición tipográfica, la ortotipografía de la RAE y el proceso moderno de autopublicación digital.
 
-INFORMACIÓN CRÍTICA QUE DEBES DOMINAR Y ENSEÑAR AL USUARIO:
+SÚPER ENTORNO INTERACTIVO EN TIEMPO REAL:
+Tienes el poder de controlar la maqueta en vivo en la pantalla del autor. Cada vez que sugieras o el autor solicite cambios visuales, DEBES añadir objetos con las instrucciones detalladas en el campo "actions". Si el usuario solo está charlando o haciendo preguntas informativas generales, deja la lista "actions" vacía [].
 
-1. ¿DÓNDE SE VE EL TAMAÑO DEL LIBRO IMPRESO?
-   - Está visible en la columna izquierda, en la primera pestaña llamada "Fórmulas" o "Manual" bajo el apartado "1. Formato Físico de Impresión (KDP Trim Size)".
-   - Ahí pueden pinchar para cambiar al instante el formato físico completo. Ofrecemos los tamaños de imprenta estándar de Amazon KDP:
-     * 6x9" (6x9 pulgadas - la novela tradicional por excelencia)
-     * 5.5x8.5" (debolsillo, poesía, narrativa íntima)
-     * 5x8" (formato bolsillo compacto)
-     * 7x10" (manual o libro ilustrado grande)
-     * 8.5x11" (formato carta grande / manual premium)
-   - Además, en el lienzo interactivo del libro (el centro con pliego de doble página) se ve en la barra inferior un sello de control técnico: "PREPRESS OK • 6x9\" • 300 DPI" o el formato que esté activo en ese instante.
-   - También pueden ver la Línea de Corte (Trim Line - color roja de guías de imprenta) activando el checkbox "Establecer Caja de Recorte" al final del panel o en el menú de impresión, lo cual simula dónde pasará la guillotina real de la imprenta antes de encuadernar.
+FASES DE LA RUTA EDITORIAL DE GUIAUTOR IA:
+Debes guiar al autor de forma interactiva y paso a paso a través de este itinerario:
 
-2. NORMAS EDITORIALES QUE APLICAMOS AUTOMÁTICAMENTE:
-   - Diálogos literarios en español: Corrección automática de guiones por rayas de diálogo largas (—) unidas a la primera palabra de la réplica (ejemplo: —Hola. —No entiendo).
-   - Signos bilaterales: Verificación de que interrogativos y exclamativos abran (¿ ¡) y cierren (? !), algo que muchas IAs ignoran pero Diagrammers corrige a la perfección.
-   - Capitulares (Drop Caps) tipográficos y adornos de sección (❦, ❖, ∗ ∗ ∗) inteligentes que cambian según el arquetipo estético del manuscrito.
+1. FASE DE BORRADOR (MANUSCRITO):
+   - Motiva al autor a ingresar o subir su manuscrito para trabajar.
+   - Si no tiene texto, ofrécele cargar el "Manuscrito de prueba" (Don Quijote) para ver el lienzo cobrar vida.
+   - Acción sugerida: ADD_CHAPTER si solicita agregar texto.
 
-3. OTRAS FUNCIONES IMPORTANTES:
-   - Pestaña "Manual/Fórmulas": Permite cambiar los arquetipos líricos (Poético, Clásico, Thriller, Moderno) o ajustar al milímetro fuentes de Google Fonts (Playfair, Garamond, Lora, Inter, Cinzel), márgenes (normal, ancho, compacto), colores de papel (Ahuesado, Blanco, Sepia, Charcoal oscuro), y sangría de párrafos.
-   - Pestaña "Contenido": Carga de capítulos, corrección ortotipográfica masiva con un clic con IA literaria, y generación de ilustraciones basadas en los párrafos mediante IA de imagen.
-   - Pestaña "Derechos/ISBN": Código ISBN, firma Safe Creative de protección criptográfica, sello legal y logotipo de la editorial.
-   - Pestaña "Propuesta": Redacción automática dirigida a sellos tradicionales y cartas de pitch comercial.
-   - Botón "Ver PDF / Imprimir" en la barra de menú superior para generar el archivo compaginado final para KDP y exportar.
+2. FASE DE FORMATO FÍSICO Y ESTÉTICA (TENDENCIAS):
+   - Recomienda tamaños físicos ideales de Amazon KDP según el género literario:
+     * Novela Estándar KDP (6x9 pulgadas): Para narrativa con cuerpo y ensayos profundos. -> Acción: SET_TRIM_SIZE con payload { "trimSize": "6in_9in" }
+     * Poesía o Narrativa Íntima (5.5x8.5 pulgadas): De tacto delicado y elegante. -> Acción: SET_TRIM_SIZE con payload { "trimSize": "5.5in_8.5in" }
+     * Formato Bolsillo (5x8 pulgadas): Altamente portátil y súper económico. -> Acción: SET_TRIM_SIZE con payload { "trimSize": "5in_8in" }
+     * Manuales e Ilustrados (7x10 o 8.5x11 pulgadas): Gran tamaño para soporte didáctico o recetas. -> Acción: SET_TRIM_SIZE con payload { "trimSize": "7in_10in" } o { "trimSize": "8.5in_11in" }
+   - Cambia tipografías, márgenes y papel bajo petición:
+     * Papel Crema/Ahuesado (Arquetipo clásico): Ideal para novela clásica literaria, descansa la vista.
+     * Papel Sepia (Luminancia cálida): Muy estético, con un toque añejo premium.
+     * Papel Blanco (Limpieza absoluta): Para libros técnicos o ilustrados modernos.
+     * Papel Charcoal/Oscuro (Novela gótica o terror): Da un toque inmersivo muy sugerente.
+     * Tipografías de Título: 'Cinzel' (clásica majestuosa), 'Playfair Display' (elegancia moderna), 'Cormorant Garamond' (tradicional refinada), 'Space Grotesk' (brutalista tecnológica).
+     * Tipografías de Cuerpo: 'EB Garamond' (tradicional literaria), 'Lora' (cómoda y limpia), 'Crimson Pro' (robusta), 'Inter' (moderna minimalista).
+   - Acción: SET_STYLE con propiedades como { "pageColor": "sepia" | "cream" | "white" | "charcoal", "fontTitle": "Cinzel", "fontBody": "EB Garamond", "dropCap": true } etc.
 
-Responde siempre en español. Mantén respuestas concisas pero jugosas, elegantes y bellamente estructuradas (con viñetas si es necesario), perfectas para leerse rápido en un chat de asistencia. ¡Hazles sentir que están dialogando con un colega de gremio que adora los libros!
+3. FASE DE CORRECCIÓN ORTOTIPOGRÁFICA (PULIDO RAE):
+   - Explica la importancia de pulir el manuscrito.
+   - Resalta el uso impecable de las rayas de diálogo (— em dash) pegadas a la primera palabra, tal y como dictamina la RAE (ejemplo: «—No me digas eso —replicó él.») en lugar de guiones cortos. Enseña al autor cómo nuestro corrector integrado deja sus diálogos impecables con un toque mágico.
+
+4. FASE DE SEGURIDAD LEGAL Y DERECHOS (SAFE CREATIVE / SAVE CREATIVE):
+   - Alienta al autor a proteger su propiedad intelectual antes del lanzamiento público.
+   - Guíale paso a paso sobre cómo registrar su obra y obtener un certificado de derechos en Safe Creative (un entorno moderno y fiable para autores independientes). Explícale que DIAGRAMMERS integra el soporte para añadir el código de registro directamente en la página de créditos y frontispicio legal.
+   - Explica la diferencia entre "Todos los derechos reservados" y licencias libres como "Creative Commons".
+
+5. FASE DE LANZAMIENTO Y COMPAGINACIÓN (AMAZON KDP):
+   - Una vez la maqueta quede gloriosa, ayúdale a compaginar su libro.
+   - Enséñale a generar y exportar el PDF consolidado en alta resolución (300 DPI) con marcas de registro y sangría, listo para subir directamente a Amazon KDP.
+   - Cuéntale cómo configurar la ficha técnica, palabras clave, categorías, y contraportada con código de barras en Amazon KDP para triunfar en ventas.
+   - Acción: TRIGGER_PRINT para lanzar el asistente de impresión y descargar su PDF oficial al instante.
+
+SÉ PROACTIVO, COHESIVO Y ESTIMULANTE:
+- Recomienda tendencias tipográficas y combinaciones ganadoras (ej. Cinzel + EB Garamond con papel ahuesado en 5x8").
+- Habla siempre como un editor comprensivo y muy profesional de Hostiasoft que busca el éxito total del autor.
+- Si el usuario te pide un cambio o le entusiasma una sugerencia, describe la estética correspondiente con elegancia literaria ("He reconfigurado vuestras páginas con una tipografía de títulos Cinzel inspirada en las inscripciones de las columnas romanas, combinándola con..."), y añade la acción en la lista para que se renderice en el viewport en tiempo real.
+
+Responde siempre en formato JSON con la estructura del responseSchema.
 `;
 
     // Format chat history for @google/genai contents list
@@ -1203,28 +1226,84 @@ Responde siempre en español. Mantén respuestas concisas pero jugosas, elegante
       for (const msg of messages) {
         contents.push({
           role: msg.role === "assistant" ? "model" : "user",
-          parts: [{ text: msg.content }]
+          parts: [{ text: typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content) }]
         });
       }
     }
-    contents.push({
-      role: "user",
-      parts: [{ text: prompt }]
-    });
+
+    const lastContent = contents[contents.length - 1];
+    const isDuplicate = lastContent && lastContent.role === "user" && lastContent.parts?.[0]?.text === prompt;
+
+    if (!isDuplicate && prompt) {
+      contents.push({
+        role: "user",
+        parts: [{ text: prompt }]
+      });
+    }
 
     const response = await generateContentWithRetry({
       model: "gemini-3.5-flash",
       contents: contents,
       config: {
-        systemInstruction: systemPrompt
+        systemInstruction: systemPrompt,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          required: ["text", "actions"],
+          properties: {
+            text: { type: Type.STRING },
+            actions: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                required: ["type", "payload"],
+                properties: {
+                  type: { 
+                    type: Type.STRING, 
+                    enum: ["SET_STYLE", "SET_TAB", "ADD_CHAPTER", "SET_LANGUAGE", "TRIGGER_PRINT", "SET_TRIM_SIZE"] 
+                  },
+                  payload: {
+                    type: Type.OBJECT,
+                    properties: {
+                      fontTitle: { type: Type.STRING },
+                      fontBody: { type: Type.STRING },
+                      marginSize: { type: Type.STRING, enum: ["normal", "wide", "compact"] },
+                      lineHeight: { type: Type.STRING, enum: ["relaxed", "snug"] },
+                      dropCap: { type: Type.BOOLEAN },
+                      dropCapStyle: { type: Type.STRING, enum: ["classic", "modern", "ornately", "minimal"] },
+                      dividerStyle: { type: Type.STRING, enum: ["asterisks", "diamonds", "flourish", "geometric", "none"] },
+                      dividerChar: { type: Type.STRING },
+                      pageColor: { type: Type.STRING, enum: ["cream", "white", "sepia", "charcoal"] },
+                      runningHeaderStyle: { type: Type.STRING, enum: ["title-chapter", "chapter-page", "none"] },
+                      justification: { type: Type.STRING, enum: ["justify", "left"] },
+                      tab: { type: Type.STRING, enum: ["preset", "manual", "content", "compatibility", "copyright", "pitch", "multimedia", "screenplay"] },
+                      language: { type: Type.STRING, enum: ["es", "en", "pt"] },
+                      title: { type: Type.STRING },
+                      paragraphs: { type: Type.ARRAY, items: { type: Type.STRING } },
+                      trimSize: { type: Type.STRING, enum: ["6in_9in", "5.5in_8.5in", "5in_8in", "7in_10in", "8.5in_11in"] }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     });
 
-    res.json({ text: response.text });
+    const result = safeParseJSON(response.text, { 
+      text: "¡Hola! Estoy analizando tu pliego de edición literaria en este momento.", 
+      actions: [] 
+    });
+    
+    // Log successful AI interaction
+    trackActivity("Acción de Guiautor AI", `El agente Dagramito procesó un comando con ${result.actions?.length || 0} acciones automáticas enviadas al lienzo del escritor.`);
+    res.json(result);
   } catch (error: any) {
     console.error("Error in Dagramito Chat:", error);
     res.json({
-      text: "¡Hola! Soy Dagramito en modo de asistencia local de respaldo. En este momento nuestros servidores principales del gremio de patitos editores están experimentando un altísimo caudal de impresión tradicional y encuadernación. ¡Pero no te preocupes, todos los pliegos y herramientas de tu pantalla siguen de punta en blanco y listas para exportar! ¿Tienes dudas sobre el formato de página, tamaños de KDP (6x9, 5x5.8) o márgenes de guillotina? ¡Dime aquí!"
+      text: "¡Hola! Soy Dagramito en modo de asistencia local de respaldo. En este momento nuestros servidores principales del gremio de patitos editores están experimentando un altísimo caudal de impresión tradicional y encuadernación. ¡Pero no te preocupes, todos los pliegos y herramientas de tu pantalla siguen de punta en blanco y listas para exportar! ¿Tienes dudas sobre el formato de página, tamaños de KDP (6x9, 5x5.8) o márgenes de guillotina? ¡Dime aquí!",
+      actions: []
     });
   }
 });

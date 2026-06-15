@@ -1998,7 +1998,7 @@ export function LandingPage({
 
           <div className="pt-6 flex flex-wrap justify-center gap-4">
             <button
-              onClick={onNavigateToStudio}
+              onClick={() => onNavigateToStudio && onNavigateToStudio()}
               className="bg-gradient-to-r from-cyan-500 via-fuchsia-600 to-orange-500 hover:from-cyan-400 hover:via-fuchsia-500 hover:to-orange-400 text-white font-extrabold px-8 py-4 rounded-2xl text-sm sm:text-base tracking-wide shadow-xl shadow-cyan-500/20 shadow-fuchsia-500/10 transition-all hover:scale-105 hover:-translate-y-0.5 active:scale-100 flex items-center gap-3 cursor-pointer"
             >
               <span>{t.liveSoftware}</span>

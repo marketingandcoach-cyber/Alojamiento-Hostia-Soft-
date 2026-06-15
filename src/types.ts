@@ -60,15 +60,16 @@ export interface BookMetadata {
   subtitle?: string;
   publisher?: string;
   year?: string;
-  // --- NEW LEGAL/ISBN PROPERTIES ---
   isbn?: string;
   safeCreativeId?: string;
-  copyrightType?: "todos-derechos" | "creative-commons" | "dominio-publico" | "ninguno";
+  copyrightType?: string;
   licenseDetails?: string;
   publisherLogo?: string; // Base64 image
   logoPlacement?: "credits" | "front_matter" | "both" | "none";
   donationLink?: string; // Optional Buy Me a Coffee or Paypal link
   donationActive?: boolean; // Whether the donation features are enabled
+  strictPaywallActive?: boolean; // Whether high-value features require Pro subscription/license activation
+  genre?: string;
 }
 
 export interface SimulatedPage {
