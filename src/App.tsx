@@ -1046,6 +1046,62 @@ export default function App() {
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
+  const handleResetProject = () => {
+    const confirmation = window.confirm(
+      "¿Estás seguro de que deseas borrar la obra actual y restaurar el libro de prueba? " +
+      "Esto eliminará cualquier manuscrito corrupto y resolverá inmediatamente los problemas de visualización y previsualización."
+    );
+    if (!confirmation) return;
+
+    localStorage.removeItem("editorial_meta");
+    localStorage.removeItem("is_maverick_member");
+    localStorage.removeItem("editorial_style");
+    localStorage.removeItem("editorial_chapters");
+    localStorage.removeItem("editorial_trim_size");
+    localStorage.removeItem("outreach_custom_publishers");
+    localStorage.removeItem("outreach_statuses");
+    localStorage.removeItem("outreach_notes");
+    localStorage.removeItem("outreach_pitches");
+    localStorage.removeItem("outreach_synopsis");
+
+    const defaultMeta = {
+      title: "Don Quijote de la Mancha",
+      author: "Miguel de Cervantes",
+      subtitle: "El ingenioso hidalgo de La Mancha",
+      publisher: "Editorial El Clásico",
+      year: "1605",
+      isbn: "",
+      safeCreativeId: "2606015848217-2CJB4R",
+      copyrightType: "todos-derechos",
+      licenseDetails: "Todos los derechos reservados. Ninguna parte de esta publicación puede ser reproducida o transmitida por ningún medio sin permiso previo.",
+      publisherLogo: "",
+      logoPlacement: "both",
+      donationActive: true,
+      donationLink: "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=ruthgmedina@gmail.com&currency_code=USD&item_name=Donacion%20DIAGRAMMERS%2520Studio"
+    };
+
+    const defaultChapters = [
+      {
+        chapterNumber: 1,
+        title: "De la condición y ejercicio del famoso hidalgo don Quijote de la Mancha",
+        paragraphs: [
+          "En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor. Una olla de algo más vaca que carnero, salpicón las más noches, duelos y quebrantos los sábados, lantejas los viernes, algún palomino de añadidura los domingos, consumían las tres partes de su hacienda. El resto della concluían sayo de velarte, calzas de velludo para las fiestas, con sus pantuflos de lo mesmo, y los días de entresemana se honraba con su vellorí de lo más fino.",
+          "Tenía en su casa una ama que pasaba de los cuarenta, y una sobrina que no llegaba a los veinte, y un mozo de campo y plaza, que así ensillaba el rocín como tomaba la podadera. Frisaba la edad de nuestro hidalgo con los cincuenta años; era de complexión recia, seco de carnes, enjuto de rostro, gran madrugador y amigo de la caza.",
+          "—Escucha, Sancho —le dijo don Quijote un día antes de partir—, que el camino que hemos de emprender está lleno de peligros inacabables.",
+          "—Señor —respondió el escudero con voz asustada—, ¿y no sería mejor quedarse en nuestra aldea que andar buscando pan de trastrigo por las selvas?",
+          "—No hables así, mi fiel escudero —reprendió el caballero—. La gloria aguarda a los espíritus magnánimos en la senda de los desvalidos."
+        ]
+      }
+    ];
+
+    setMetadata(defaultMeta);
+    setStyleSettings(ARCHETYPES.classic);
+    setChapters(defaultChapters);
+    setRawText(TEXT_TEMPLATES[0].text);
+    setKdpTrimSize("6in_9in");
+    triggerStudioToast("¡Maquetador restaurado con éxito con la obra de muestra!", "success");
+  };
+
   // --- PAGINATION ENGINE ---
   // Re-paginate whenever style settings, chapters, physical trim size, illustrated book or credits page toggle change
   useEffect(() => {
@@ -1107,6 +1163,8 @@ export default function App() {
     }
 
     chapters.forEach((chap) => {
+      if (!chap || !chap.paragraphs || !Array.isArray(chap.paragraphs)) return;
+
       // Each chapter starts on a new page (frequently odd pages in real books, but definitely a new layout page)
       let chapterPageNum = 1;
 
@@ -1123,6 +1181,10 @@ export default function App() {
 
       while (paraIdx < totalParas) {
         const nextPara = chap.paragraphs[paraIdx];
+        if (!nextPara || typeof nextPara !== "string") {
+          paraIdx++;
+          continue;
+        }
         const capLimit = chapterPageNum === 1 ? charCapacityOpener : charCapacityBody;
 
         // Check if there are any illustrations placed AFTER this paragraph (i.e. paragraphIndex === paraIdx)
@@ -4689,6 +4751,14 @@ ${generatedScreenplayText}
           >
             {savedSuccess ? "Guardado ✓" : "Guardar Proyecto"}
           </button>
+          <button
+            onClick={handleResetProject}
+            className="bg-red-950/40 hover:bg-red-900/40 border border-red-500/30 text-red-350 hover:text-red-200 px-2.5 py-2 rounded font-medium flex items-center gap-1 transition-colors cursor-pointer"
+            title="Borrar obra actual y resetear el maquetador de libro si hay errores de previsualización"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-red-400 shrink-0" />
+            <span className="whitespace-nowrap">Nueva Obra (Reset)</span>
+          </button>
         </div>
 
         {/* Global Export Options */}
@@ -4891,23 +4961,54 @@ ${generatedScreenplayText}
                 const files = e.dataTransfer.files;
                 if (files && files.length > 0) {
                   const file = files[0];
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    const text = event.target?.result as string;
-                    if (text) {
-                      const lines = text.split("\n").filter(l => l.trim().length > 0);
-                      setChapters([
-                        {
-                          chapterNumber: 1,
-                          title: file.name.replace(/\.[^/.]+$/, ""),
-                          paragraphs: lines.slice(0, 15)
+                  const ext = file.name.split(".").pop()?.toLowerCase();
+                  if (ext === "docx") {
+                    const reader = new FileReader();
+                    reader.onload = async (event) => {
+                      try {
+                        const arrayBuffer = event.target?.result as ArrayBuffer;
+                        if (!arrayBuffer) throw new Error("Archivo de Word vacío.");
+                        const result = await mammoth.extractRawText({ arrayBuffer });
+                        const text = result.value;
+                        if (!text || text.trim() === "") {
+                          throw new Error("No se pudo extraer texto legible del archivo Word.");
                         }
-                      ]);
-                      triggerStudioToast(`¡Manuscrito '${file.name}' leído e incorporado!`, "success");
-                      sendDagramitoQuery(`He subido mi archivo '${file.name}'. Por favor, ayúdame a maquetarlo.`);
-                    }
-                  };
-                  reader.readAsText(file);
+                        setRawText(text);
+                        const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+                        setChapters([
+                          {
+                            chapterNumber: 1,
+                            title: file.name.replace(/\.[^/.]+$/, ""),
+                            paragraphs: lines.slice(0, 15)
+                          }
+                        ]);
+                        triggerStudioToast(`¡Manuscrito Word '${file.name}' leído e incorporado con éxito!`, "success");
+                        sendDagramitoQuery(`He subido mi archivo Word '${file.name}'. Por favor, ayúdame a maquetarlo.`);
+                      } catch (err: any) {
+                        triggerStudioToast(`Error al leer archivo Word: ${err.message || err}`, "error");
+                      }
+                    };
+                    reader.readAsArrayBuffer(file);
+                  } else {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const text = event.target?.result as string;
+                      if (text) {
+                        setRawText(text);
+                        const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+                        setChapters([
+                          {
+                            chapterNumber: 1,
+                            title: file.name.replace(/\.[^/.]+$/, ""),
+                            paragraphs: lines.slice(0, 15)
+                          }
+                        ]);
+                        triggerStudioToast(`¡Manuscrito '${file.name}' leído e incorporado!`, "success");
+                        sendDagramitoQuery(`He subido mi archivo '${file.name}'. Por favor, ayúdame a maquetarlo.`);
+                      }
+                    };
+                    reader.readAsText(file);
+                  }
                 }
               }}
               className="border border-dashed border-slate-800 hover:border-amber-500/40 bg-slate-900/40 hover:bg-slate-900/80 rounded-lg p-2.5 text-center transition-all cursor-pointer group flex flex-col items-center justify-center gap-1"
@@ -4923,23 +5024,54 @@ ${generatedScreenplayText}
                   const files = e.target.files;
                   if (files && files.length > 0) {
                     const file = files[0];
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      const text = event.target?.result as string;
-                      if (text) {
-                        const lines = text.split("\n").filter(l => l.trim().length > 0);
-                        setChapters([
-                          {
-                            chapterNumber: 1,
-                            title: file.name.replace(/\.[^/.]+$/, ""),
-                            paragraphs: lines.slice(0, 15)
+                    const ext = file.name.split(".").pop()?.toLowerCase();
+                    if (ext === "docx") {
+                      const reader = new FileReader();
+                      reader.onload = async (event) => {
+                        try {
+                          const arrayBuffer = event.target?.result as ArrayBuffer;
+                          if (!arrayBuffer) throw new Error("Archivo de Word vacío.");
+                          const result = await mammoth.extractRawText({ arrayBuffer });
+                          const text = result.value;
+                          if (!text || text.trim() === "") {
+                            throw new Error("No se pudo extraer texto legible del archivo Word.");
                           }
-                        ]);
-                        triggerStudioToast(`¡Manuscrito '${file.name}' leído e incorporado!`, "success");
-                        sendDagramitoQuery(`He subido mi archivo '${file.name}'. Por favor, ayúdame a maquetarlo.`);
-                      }
-                    };
-                    reader.readAsText(file);
+                          setRawText(text);
+                          const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+                          setChapters([
+                            {
+                              chapterNumber: 1,
+                              title: file.name.replace(/\.[^/.]+$/, ""),
+                              paragraphs: lines.slice(0, 15)
+                            }
+                          ]);
+                          triggerStudioToast(`¡Manuscrito Word '${file.name}' leído e incorporado con éxito!`, "success");
+                          sendDagramitoQuery(`He subido mi archivo Word '${file.name}'. Por favor, ayúdame a maquetarlo.`);
+                        } catch (err: any) {
+                          triggerStudioToast(`Error al leer archivo Word: ${err.message || err}`, "error");
+                        }
+                      };
+                      reader.readAsArrayBuffer(file);
+                    } else {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const text = event.target?.result as string;
+                        if (text) {
+                          setRawText(text);
+                          const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+                          setChapters([
+                            {
+                              chapterNumber: 1,
+                              title: file.name.replace(/\.[^/.]+$/, ""),
+                              paragraphs: lines.slice(0, 15)
+                            }
+                          ]);
+                          triggerStudioToast(`¡Manuscrito '${file.name}' leído e incorporado!`, "success");
+                          sendDagramitoQuery(`He subido mi archivo '${file.name}'. Por favor, ayúdame a maquetarlo.`);
+                        }
+                      };
+                      reader.readAsText(file);
+                    }
                   }
                 }}
                 className="hidden"
@@ -4990,104 +5122,137 @@ ${generatedScreenplayText}
               </button>
             </div>
           </div>
-          {/* Guiautor IA Active Agent Chat Module Container */}
-          <div className="flex-1 border border-slate-800/80 bg-slate-950/85 rounded-xl overflow-hidden p-3 shadow-inner text-left flex flex-col min-h-[400px] space-y-2.5">
-            {/* Scrollable messages container inside the sidebar */}
-            <div className="flex-1 overflow-y-auto pr-1 space-y-3 flex flex-col min-h-0 text-left">
-              {dagramitoMessages.map((msg, idx) => (
-                <div key={idx} className={`flex gap-2 max-w-[92%] ${msg.role === "user" ? "self-end justify-end flex-row-reverse" : "self-start"}`}>
-                  {msg.role === "assistant" && (
-                    <div className="flex flex-col items-center gap-1 text-slate-500 shrink-0 self-start">
-                      <div className="w-5.5 h-5.5 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-center text-xs select-none animate-pulse">
-                        🧠
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => speakHelper(msg.content)}
-                        className="p-1 hover:bg-slate-800 hover:text-amber-400 rounded transition-colors cursor-pointer"
-                        title="Escuchar respuesta"
-                      >
-                        <Volume2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
 
-                  <div className="flex-1 flex flex-col gap-1">
-                    <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${
-                      msg.role === "user" 
-                        ? "bg-amber-500 text-slate-950 font-medium rounded-br-none border border-amber-400/20 font-sans shadow"
-                        : "bg-slate-900 border border-slate-850 text-slate-200 rounded-tl-none select-text space-y-1 block font-sans"
-                    }`}>
-                      {msg.role === "user" ? (
-                        msg.content
-                      ) : (
-                        parseDagramitoMarkdown(msg.content)
-                      )}
+          {/* TAB BAR FOR SIDEBAR SECTIONS */}
+          <div className="bg-slate-950 p-1.5 rounded-xl border border-slate-800 flex gap-1 overflow-x-auto scrollbar-none shrink-0">
+            {[
+              { id: "guiautor", label: "Tutor IA", icon: "🧠" },
+              { id: "preset", label: "Estilos", icon: "🎨" },
+              { id: "manual", label: "Configuración", icon: "⚙️" },
+              { id: "content", label: "Capítulos", icon: "📖" },
+              { id: "copyright", label: "Derechos / Portada", icon: "⚖️" },
+              { id: "multimedia", label: "Voces", icon: "🎙️" },
+              { id: "screenplay", label: "Guión", icon: "🎬" }
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all duration-150 flex items-center gap-1 cursor-pointer ${
+                    isActive
+                      ? "bg-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/10"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+                  }`}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Guiautor IA Active Agent Chat Module Container */}
+          {activeTab === "guiautor" && (
+            <div className="flex-1 border border-slate-800/80 bg-slate-950/85 rounded-xl overflow-hidden p-3 shadow-inner text-left flex flex-col min-h-[400px] space-y-2.5">
+              {/* Scrollable messages container inside the sidebar */}
+              <div className="flex-1 overflow-y-auto pr-1 space-y-3 flex flex-col min-h-0 text-left">
+                {dagramitoMessages.map((msg, idx) => (
+                  <div key={idx} className={`flex gap-2 max-w-[92%] ${msg.role === "user" ? "self-end justify-end flex-row-reverse" : "self-start"}`}>
+                    {msg.role === "assistant" && (
+                      <div className="flex flex-col items-center gap-1 text-slate-500 shrink-0 self-start">
+                        <div className="w-5.5 h-5.5 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-center text-xs select-none animate-pulse">
+                          🧠
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => speakHelper(msg.content)}
+                          className="p-1 hover:bg-slate-800 hover:text-amber-400 rounded transition-colors cursor-pointer"
+                          title="Escuchar respuesta"
+                        >
+                          <Volume2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="flex-1 flex flex-col gap-1">
+                      <div className={`p-2.5 rounded-xl text-xs leading-relaxed ${
+                        msg.role === "user" 
+                          ? "bg-amber-500 text-slate-950 font-medium rounded-br-none border border-amber-400/20 font-sans shadow"
+                          : "bg-slate-900 border border-slate-850 text-slate-200 rounded-tl-none select-text space-y-1 block font-sans"
+                      }`}>
+                        {msg.role === "user" ? (
+                          msg.content
+                        ) : (
+                          parseDagramitoMarkdown(msg.content)
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
 
-              {/* Typing Loader Indicator */}
-              {dagramitoIsTyping && (
-                <div className="flex gap-1.5 items-center self-start pl-1 text-slate-500 font-mono text-[9px]">
-                  <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping shrink-0" />
-                  <span>Guiautor está redactando vuestro pliego...</span>
-                </div>
-              )}
-              
-              {/* Keep chat scrolled to bottom tool */}
-              <div ref={dagramitoEndRef} />
-            </div>
+                {/* Typing Loader Indicator */}
+                {dagramitoIsTyping && (
+                  <div className="flex gap-1.5 items-center self-start pl-1 text-slate-500 font-mono text-[9px]">
+                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping shrink-0" />
+                    <span>Guiautor está redactando vuestro pliego...</span>
+                  </div>
+                )}
+                
+                {/* Keep chat scrolled to bottom tool */}
+                <div ref={dagramitoEndRef} />
+              </div>
 
-            {/* Suggested Pills shortcut row for faster control click */}
-            <div className="flex flex-wrap gap-1 pt-1 border-t border-slate-850/60 justify-start shrink-0">
-              {[
-                { text: "Poner tamaño 6x9 estándar", icon: "📐" },
-                { text: "Cambiar papel a color sepia", icon: "🍂" },
-                { text: "Activar capitulares artísticas", icon: "❦" },
-                { text: "Imprimir / Ver PDF Compaginado", icon: "🖨️" }
-              ].map((pill, id) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => sendDagramitoQuery(pill.text)}
-                  disabled={dagramitoIsTyping}
-                  className="bg-slate-900 hover:bg-slate-850 disabled:opacity-40 border border-slate-850 hover:border-slate-800 text-slate-350 hover:text-white px-1.5 py-0.5 rounded-lg text-[9px] cursor-pointer transition-colors text-left flex items-center gap-0.5 font-mono"
-                >
-                  <span>{pill.icon}</span> {pill.text}
-                </button>
-              ))}
-            </div>
+              {/* Suggested Pills shortcut row for faster control click */}
+              <div className="flex flex-wrap gap-1 pt-1 border-t border-slate-850/60 justify-start shrink-0">
+                {[
+                  { text: "Poner tamaño 6x9 estándar", icon: "📐" },
+                  { text: "Cambiar papel a color sepia", icon: "🍂" },
+                  { text: "Activar capitulares artísticas", icon: "❦" },
+                  { text: "Imprimir / Ver PDF Compaginado", icon: "🖨️" }
+                ].map((pill, id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => sendDagramitoQuery(pill.text)}
+                    disabled={dagramitoIsTyping}
+                    className="bg-slate-900 hover:bg-slate-850 disabled:opacity-40 border border-slate-850 hover:border-slate-800 text-slate-350 hover:text-white px-1.5 py-0.5 rounded-lg text-[9px] cursor-pointer transition-colors text-left flex items-center gap-0.5 font-mono"
+                  >
+                    <span>{pill.icon}</span> {pill.text}
+                  </button>
+                ))}
+              </div>
 
-            {/* Form submit footer inside the sidebar container */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!dagramitoInput.trim() || dagramitoIsTyping) return;
-                sendDagramitoQuery(dagramitoInput);
-                setDagramitoInput("");
-              }}
-              className="flex gap-1.5 pt-1.5 border-t border-slate-850/80 shrink-0"
-            >
-              <input
-                type="text"
-                value={dagramitoInput}
-                onChange={(e) => setDagramitoInput(e.target.value)}
-                placeholder="Escríbele a Guiautor..."
-                disabled={dagramitoIsTyping}
-                className="flex-1 bg-slate-900 border border-slate-800 focus:border-amber-500/50 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/30 font-sans"
-              />
-              <button
-                type="submit"
-                disabled={!dagramitoInput.trim() || dagramitoIsTyping}
-                className="bg-amber-500 hover:bg-amber-400 disabled:opacity-30 disabled:hover:bg-amber-500 text-slate-950 p-1.5 rounded-xl cursor-pointer transition-colors shrink-0 flex items-center justify-center font-bold animate-pulse"
-                title="Enviar pregunta"
+              {/* Form submit footer inside the sidebar container */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!dagramitoInput.trim() || dagramitoIsTyping) return;
+                  sendDagramitoQuery(dagramitoInput);
+                  setDagramitoInput("");
+                }}
+                className="flex gap-1.5 pt-1.5 border-t border-slate-850/80 shrink-0"
               >
-                <Send className="w-3.5 h-3.5 stroke-[2.5]" />
-              </button>
-            </form>
-          </div>
+                <input
+                  type="text"
+                  value={dagramitoInput}
+                  onChange={(e) => setDagramitoInput(e.target.value)}
+                  placeholder="Escríbele a Guiautor..."
+                  disabled={dagramitoIsTyping}
+                  className="flex-1 bg-slate-900 border border-slate-800 focus:border-amber-500/50 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/30 font-sans"
+                />
+                <button
+                  type="submit"
+                  disabled={!dagramitoInput.trim() || dagramitoIsTyping}
+                  className="bg-amber-500 hover:bg-amber-400 disabled:opacity-30 disabled:hover:bg-amber-500 text-slate-950 p-1.5 rounded-xl cursor-pointer transition-colors shrink-0 flex items-center justify-center font-bold animate-pulse"
+                  title="Enviar pregunta"
+                >
+                  <Send className="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+              </form>
+            </div>
+          )}
 
             {/* TAB 1: PREDEFINED LAYOUT PRESETS & AI ANALYZER */}
             {activeTab === "preset" && (
@@ -5346,6 +5511,58 @@ ${generatedScreenplayText}
                   <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded">
                     Perfil Personalizado
                   </span>
+                </div>
+
+                {/* Identidad de la Obra (Metadatos) */}
+                <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl space-y-3">
+                  <h4 className="text-xs font-bold text-slate-200 tracking-wider uppercase flex items-center gap-1.5 font-mono">
+                    <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                    Identidad de la Obra (Metadatos)
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wide block">Título del Libro</label>
+                      <input
+                        type="text"
+                        value={metadata.title}
+                        onChange={(e) => {
+                          const updated = { ...metadata, title: e.target.value };
+                          setMetadata(updated);
+                          saveToLocalStorage(updated, styleSettings, chapters);
+                        }}
+                        placeholder="Ej: El Quijote de la Mancha"
+                        className="w-full text-xs bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-lg p-2 text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wide block">Nombre del Autor</label>
+                      <input
+                        type="text"
+                        value={metadata.author}
+                        onChange={(e) => {
+                          const updated = { ...metadata, author: e.target.value };
+                          setMetadata(updated);
+                          saveToLocalStorage(updated, styleSettings, chapters);
+                        }}
+                        placeholder="Ej: Miguel de Cervantes"
+                        className="w-full text-xs bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-lg p-2 text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1 col-span-2">
+                      <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wide block">Sello Editorial / Publisher</label>
+                      <input
+                        type="text"
+                        value={metadata.publisher || ""}
+                        onChange={(e) => {
+                          const updated = { ...metadata, publisher: e.target.value };
+                          setMetadata(updated);
+                          saveToLocalStorage(updated, styleSettings, chapters);
+                        }}
+                        placeholder="Ej: Imprenta de Juan de la Cuesta"
+                        className="w-full text-xs bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-lg p-2 text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Font Selections */}
@@ -9599,15 +9816,22 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                 <div className="space-y-1">
                   <h3 className="text-base font-bold text-white">No hay texto compaginado aún</h3>
                   <p className="text-xs text-slate-400">
-                    Sube tu borrador o carga un ejemplo de literatura hispana clásica y presiona el botón compaginador. Se dividirá instantáneamente en pliegos y páginas con diseño profesional.
+                    Sube tu borrador o carga un ejemplo de literatura hispana clásica y presiona el botón compaginador o división de capítulos. Se dividirá instantáneamente en pliegos y páginas con diseño profesional.
                   </p>
                 </div>
-                <div className="pt-2">
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
                   <button
                     onClick={() => handleApplyTemplate(TEXT_TEMPLATES[0])}
-                    className="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold px-4 py-2 rounded-lg transition-transform hover:-translate-y-0.5 cursor-pointer"
+                    className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold px-4 py-2.5 rounded-lg transition-all hover:-translate-y-0.5 cursor-pointer"
                   >
                     Cargar Don Quijote Clásico
+                  </button>
+                  <button
+                    onClick={handleResetProject}
+                    className="w-full sm:w-auto bg-red-950/30 hover:bg-red-900/30 border border-red-500/30 text-red-350 text-xs font-bold px-4 py-2.5 rounded-lg transition-all hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                    <span>Restaurar Maquetador Completo</span>
                   </button>
                 </div>
               </div>
