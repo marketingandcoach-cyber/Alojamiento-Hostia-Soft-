@@ -70,6 +70,13 @@ export interface BookMetadata {
   donationActive?: boolean; // Whether the donation features are enabled
   strictPaywallActive?: boolean; // Whether high-value features require Pro subscription/license activation
   genre?: string;
+  trimSize?: string;
+  targetPdfImpreso?: boolean;
+  targetEpub?: boolean;
+  targetEbook?: boolean;
+  targetHardcover?: boolean;
+  targetAudiolibro?: boolean;
+  targetVella?: boolean;
 }
 
 export interface SimulatedPage {

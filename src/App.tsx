@@ -323,7 +323,15 @@ export default function App() {
     publisherLogo: "",
     logoPlacement: "both",
     donationActive: true,
-    donationLink: "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=ruthgmedina@gmail.com&currency_code=USD&item_name=Donacion%20DIAGRAMMERS%20Studio"
+    donationLink: "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=ruthgmedina@gmail.com&currency_code=USD&item_name=Donacion%20DIAGRAMMERS%20Studio",
+    genre: "Novela",
+    trimSize: "6in_9in",
+    targetPdfImpreso: true,
+    targetEpub: true,
+    targetEbook: true,
+    targetHardcover: false,
+    targetAudiolibro: false,
+    targetVella: false,
   });
 
   const [styleSettings, setStyleSettings] = useState<BookStyleSettings>(ARCHETYPES.classic);
@@ -617,6 +625,8 @@ export default function App() {
   // --- INTERACTIVE VISUAL FONT DROPDOWN STATES ---
   const [isTitleFontDropdownOpen, setIsTitleFontDropdownOpen] = useState<boolean>(false);
   const [isBodyFontDropdownOpen, setIsBodyFontDropdownOpen] = useState<boolean>(false);
+  const [isSidebarTitleFontOpen, setIsSidebarTitleFontOpen] = useState<boolean>(false);
+  const [isSidebarBodyFontOpen, setIsSidebarBodyFontOpen] = useState<boolean>(false);
 
   // --- COMPRESSION & OPTIMIZATION STATES ---
   const [compressDpi, setCompressDpi] = useState<"300" | "150" | "72">("300");
@@ -632,6 +642,7 @@ export default function App() {
   const [speakingStatus, setSpeakingStatus] = useState<string>("Listo para narrar");
   const [equalizerBars, setEqualizerBars] = useState<number[]>([15, 15, 15, 15, 15, 15, 15, 15]);
   const speakerTimerRef = useRef<any>(null);
+  const saveTimeoutRef = useRef<any>(null);
 
   // --- CINEMATIC SCREENPLAY & MAVERICK SUITE STATES ---
   const [isMaverickMember, setIsMaverickMember] = useState<boolean>(false);
@@ -1033,17 +1044,26 @@ export default function App() {
     newSynopsis = synopsisText,
     newTrimSize = kdpTrimSize
   ) => {
+    // Quick, non-blocking items saved instantly (vital so metadata updates reflect in UI without lag)
     localStorage.setItem("editorial_meta", JSON.stringify(newMeta));
     localStorage.setItem("editorial_style", JSON.stringify(newStyle));
-    localStorage.setItem("editorial_chapters", JSON.stringify(newChaps));
     localStorage.setItem("editorial_trim_size", newTrimSize);
-    localStorage.setItem("outreach_custom_publishers", JSON.stringify(newCustomPubs));
-    localStorage.setItem("outreach_statuses", JSON.stringify(newStatuses));
-    localStorage.setItem("outreach_notes", JSON.stringify(newNotes));
-    localStorage.setItem("outreach_pitches", JSON.stringify(newPitches));
-    localStorage.setItem("outreach_synopsis", newSynopsis);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+
+    // Debounce the heavy, massive object serialization (especially chapters, which block the core UI thread)
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      localStorage.setItem("editorial_chapters", JSON.stringify(newChaps));
+      localStorage.setItem("outreach_custom_publishers", JSON.stringify(newCustomPubs));
+      localStorage.setItem("outreach_statuses", JSON.stringify(newStatuses));
+      localStorage.setItem("outreach_notes", JSON.stringify(newNotes));
+      localStorage.setItem("outreach_pitches", JSON.stringify(newPitches));
+      localStorage.setItem("outreach_synopsis", newSynopsis);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2000);
+    }, 400); // 400ms is perfectly imperceptible yet completely unblocks rapid keystrokes!
   };
 
   const handleResetProject = () => {
@@ -1064,7 +1084,7 @@ export default function App() {
     localStorage.removeItem("outreach_pitches");
     localStorage.removeItem("outreach_synopsis");
 
-    const defaultMeta = {
+    const defaultMeta: BookMetadata = {
       title: "Don Quijote de la Mancha",
       author: "Miguel de Cervantes",
       subtitle: "El ingenioso hidalgo de La Mancha",
@@ -1077,7 +1097,15 @@ export default function App() {
       publisherLogo: "",
       logoPlacement: "both",
       donationActive: true,
-      donationLink: "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=ruthgmedina@gmail.com&currency_code=USD&item_name=Donacion%20DIAGRAMMERS%2520Studio"
+      donationLink: "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=ruthgmedina@gmail.com&currency_code=USD&item_name=Donacion%20DIAGRAMMERS%2520Studio",
+      genre: "Novela",
+      trimSize: "6in_9in",
+      targetPdfImpreso: true,
+      targetEpub: true,
+      targetEbook: true,
+      targetHardcover: false,
+      targetAudiolibro: false,
+      targetVella: false,
     };
 
     const defaultChapters = [
@@ -1903,9 +1931,9 @@ export default function App() {
   };
 
   // Fast fallback local layout parser in case they can't or don't want to use AI
-  const handleLocalQuickLayout = () => {
+  const handleLocalQuickLayout = (textToUse = rawText) => {
     setFormatError(null);
-    const lines = rawText.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+    const lines = textToUse.split("\n").map(l => l.trim()).filter(l => l.length > 0);
     if (lines.length === 0) return;
 
     // Grouping by "capitulo" heuristic
@@ -2036,11 +2064,14 @@ export default function App() {
             const cleanName = fileName.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
             setMetadata(prev => {
               const updated = { ...prev, title: cleanName };
-              saveToLocalStorage(updated, styleSettings, chapters);
+              // We will call saveToLocalStorage at the end of quick layout
               return updated;
             });
 
-            setFileUploadSuccess(`¡Documento Word "${fileName}" cargado con éxito! Ahora presiona "Compaginar con IA" o "Partición Rápida Local" para maquetarlo.`);
+            // Automatically format and paginate to make sure preview is instantly visible
+            handleLocalQuickLayout(extractedText);
+
+            setFileUploadSuccess(`¡Documento Word "${fileName}" cargado y compaginado con éxito!`);
           } catch (err: any) {
             setFileUploadError(`Error al leer archivo Word: ${err.message || err}`);
           }
@@ -2061,11 +2092,13 @@ export default function App() {
             const cleanName = fileName.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
             setMetadata(prev => {
               const updated = { ...prev, title: cleanName };
-              saveToLocalStorage(updated, styleSettings, chapters);
               return updated;
             });
 
-            setFileUploadSuccess(`¡Manuscrito "${fileName}" cargado con éxito! Ahora presiona "Compaginar con IA" o "Partición Rápida Local" para estructurarlo.`);
+            // Automatically format and paginate to make sure preview is instantly visible
+            handleLocalQuickLayout(text);
+
+            setFileUploadSuccess(`¡Manuscrito "${fileName}" cargado y compaginado con éxito!`);
           } catch (err: any) {
             setFileUploadError(`Error al leer el archivo: ${err.message || err}`);
           }
@@ -4744,6 +4777,21 @@ ${generatedScreenplayText}
               placeholder="Opcional"
             />
           </div>
+          <div className="h-6 w-[1px] bg-slate-800 self-center"></div>
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Tipo de Libro</span>
+            <input
+              type="text"
+              value={metadata.genre || ""}
+              onChange={(e) => {
+                const updated = { ...metadata, genre: e.target.value };
+                setMetadata(updated);
+                saveToLocalStorage(updated, styleSettings, chapters);
+              }}
+              className="bg-transparent text-slate-300 font-medium focus:outline-none focus:text-amber-300 w-24 py-0.5"
+              placeholder="Novela"
+            />
+          </div>
           <button
             onClick={() => saveToLocalStorage()}
             className="ml-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-700 text-slate-200 px-3 py-2 rounded font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -4938,6 +4986,368 @@ ${generatedScreenplayText}
             </div>
           </div>
 
+          {/* PERSISTENT WRITER IDENTITY & TYPOGRAPHY QUICK-BAR (Always visible as requested) */}
+          <div className="bg-slate-950/90 border border-amber-500/15 rounded-xl p-3.5 space-y-3 shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-3 opacity-5 pointer-events-none">
+              <Feather className="w-12 h-12 text-amber-400" />
+            </div>
+            
+            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+              <span className="text-[10.5px] font-black uppercase text-amber-300 font-mono tracking-widest flex items-center gap-1.5">
+                <Feather className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                Firma de Autor y Letra del Libro
+              </span>
+              <span className="text-[8px] font-mono text-amber-400/90 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.2 rounded uppercase">
+                Edición Activa
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 font-sans">
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase font-bold text-slate-400 tracking-wide block">Título del Libro</label>
+                <input
+                  type="text"
+                  value={metadata.title}
+                  onChange={(e) => {
+                    const updated = { ...metadata, title: e.target.value };
+                    setMetadata(updated);
+                    saveToLocalStorage(updated, styleSettings, chapters);
+                  }}
+                  placeholder="Ej: Don Quijote"
+                  className="w-full text-[11px] bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-lg p-2 text-slate-100 placeholder-slate-600 focus:outline-none transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase font-bold text-slate-400 tracking-wide block">Nombre del Autor</label>
+                <input
+                  type="text"
+                  value={metadata.author}
+                  onChange={(e) => {
+                    const updated = { ...metadata, author: e.target.value };
+                    setMetadata(updated);
+                    saveToLocalStorage(updated, styleSettings, chapters);
+                  }}
+                  placeholder="Ej: Cervantes"
+                  className="w-full text-[11px] bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-lg p-2 text-slate-100 placeholder-slate-600 focus:outline-none transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase font-bold text-slate-400 tracking-wide block">Tipo de Libro / Género</label>
+                <input
+                  type="text"
+                  value={metadata.genre || ""}
+                  onChange={(e) => {
+                    const updated = { ...metadata, genre: e.target.value };
+                    setMetadata(updated);
+                    saveToLocalStorage(updated, styleSettings, chapters);
+                  }}
+                  placeholder="Ej: Novela"
+                  className="w-full text-[11px] bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-lg p-2 text-slate-100 placeholder-slate-600 focus:outline-none transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase font-bold text-slate-400 tracking-wide block">Sello Editorial</label>
+                <input
+                  type="text"
+                  value={metadata.publisher || ""}
+                  onChange={(e) => {
+                    const updated = { ...metadata, publisher: e.target.value };
+                    setMetadata(updated);
+                    saveToLocalStorage(updated, styleSettings, chapters);
+                  }}
+                  placeholder="Ej: El Clásico"
+                  className="w-full text-[11px] bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-lg p-2 text-slate-100 placeholder-slate-600 focus:outline-none transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* TAMAÑO DE IMPRESIÓN & CANALES DE DISTRIBUCIÓN EN AMAZON (New requested controls) */}
+            <div className="border-t border-slate-850/80 pt-2.5 space-y-2.5 font-sans">
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase font-black text-amber-300 font-mono tracking-widest flex items-center justify-between">
+                  <span>📐 Formato Físico de Edición</span>
+                  <span className="text-[8px] bg-slate-900 border border-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-normal font-sans tracking-normal capitalize">
+                    Sincronización de Pliegos
+                  </span>
+                </label>
+                <select
+                  value={kdpTrimSize}
+                  onChange={(e) => {
+                    const val = e.target.value as any;
+                    setKdpTrimSize(val);
+                    saveToLocalStorage(metadata, styleSettings, chapters, customPublishers, publisherStatuses, publisherNotes, generatedPitches, synopsisText, val);
+                  }}
+                  className="w-full text-[11px] bg-slate-900 border border-slate-800 focus:border-amber-500/60 rounded-lg p-2 text-slate-100 focus:outline-none transition-colors cursor-pointer"
+                >
+                  {Object.entries(TRIM_SIZE_FACTORS).map(([key, value]) => (
+                    <option key={key} value={key} className="bg-slate-950 text-slate-100">
+                      {value.label} ({value.width} × {value.height})
+                    </option>
+                  ))}
+                </select>
+                <div className="text-[8.5px] text-slate-500 flex items-center gap-1 mt-1 leading-normal italic">
+                  <span>💡</span>
+                  <span>Calculado al instante para imposición de imprenta, lomo y sangrado suizo.</span>
+                </div>
+              </div>
+
+              {/* AMAZON CHANNELS & TRENDS SELECTION */}
+              <div className="space-y-2 pt-1 border-t border-slate-850/40">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wide block">
+                    🎯 Formatos y Tendencias en Amazon
+                  </span>
+                  <span className="text-[8px] bg-amber-500/10 text-amber-300/90 border border-amber-500/20 px-1 py-0.2 rounded font-mono uppercase">
+                    Guía de Éxito 2026
+                  </span>
+                </div>
+                
+                <p className="text-[9px] text-slate-500 leading-normal">
+                  Amazon premia a los autores que publican simultáneamente en múltiples canales. Activa tus objetivos abajo para calibrar las comprobaciones de compatibilidad automática.
+                </p>
+
+                <div className="grid grid-cols-2 gap-2 text-[10.5px]">
+                  {/* PDF impreso */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = { ...metadata, targetPdfImpreso: !metadata.targetPdfImpreso };
+                      setMetadata(updated);
+                      saveToLocalStorage(updated, styleSettings, chapters);
+                    }}
+                    className={`p-1.5 rounded-lg border text-left flex flex-col gap-0.5 cursor-pointer transition-all ${
+                      metadata.targetPdfImpreso
+                        ? "bg-amber-500/10 border-amber-500/40 text-amber-300"
+                        : "bg-slate-900/60 border-slate-850 text-slate-400 hover:border-slate-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px]">📕</span>
+                      <span className="font-bold truncate">PDF Impreso</span>
+                      <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    </div>
+                    <span className="text-[7.5px] text-slate-500 leading-tight">
+                      Tapa blanda tradicional. Formato estrella.
+                    </span>
+                  </button>
+
+                  {/* ePub */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = { ...metadata, targetEpub: !metadata.targetEpub };
+                      setMetadata(updated);
+                      saveToLocalStorage(updated, styleSettings, chapters);
+                    }}
+                    className={`p-1.5 rounded-lg border text-left flex flex-col gap-0.5 cursor-pointer transition-all ${
+                      metadata.targetEpub
+                        ? "bg-amber-500/10 border-amber-500/40 text-amber-300"
+                        : "bg-slate-900/60 border-slate-850 text-slate-400 hover:border-slate-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px]">📱</span>
+                      <span className="font-bold truncate">ePub Oficial</span>
+                    </div>
+                    <span className="text-[7.5px] text-slate-500 leading-tight">
+                      Flujo de texto refluible y compatible.
+                    </span>
+                  </button>
+
+                  {/* eBook Kindle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = { ...metadata, targetEbook: !metadata.targetEbook };
+                      setMetadata(updated);
+                      saveToLocalStorage(updated, styleSettings, chapters);
+                    }}
+                    className={`p-1.5 rounded-lg border text-left flex flex-col gap-0.5 cursor-pointer transition-all ${
+                      metadata.targetEbook
+                        ? "bg-amber-500/10 border-amber-500/40 text-amber-300"
+                        : "bg-slate-900/60 border-slate-850 text-slate-400 hover:border-slate-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px]">⚡</span>
+                      <span className="font-bold truncate">Kindle eBook</span>
+                    </div>
+                    <span className="text-[7.5px] text-slate-500 leading-tight">
+                      El 80% de ventas digitales directas.
+                    </span>
+                  </button>
+
+                  {/* Tapa Dura (Hardcover) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = { ...metadata, targetHardcover: !metadata.targetHardcover };
+                      setMetadata(updated);
+                      saveToLocalStorage(updated, styleSettings, chapters);
+                    }}
+                    className={`p-1.5 rounded-lg border text-left flex flex-col gap-0.5 cursor-pointer transition-all ${
+                      metadata.targetHardcover
+                        ? "bg-amber-500/10 border-amber-500/40 text-amber-300"
+                        : "bg-slate-900/60 border-slate-850 text-slate-400 hover:border-slate-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px]">👑</span>
+                      <span className="font-bold truncate">Tapa Dura KDP</span>
+                    </div>
+                    <span className="text-[7.5px] text-slate-500 leading-tight">
+                      Ganancia premium del mercado actual.
+                    </span>
+                  </button>
+
+                  {/* Audiolibro de Autor */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = { ...metadata, targetAudiolibro: !metadata.targetAudiolibro };
+                      setMetadata(updated);
+                      saveToLocalStorage(updated, styleSettings, chapters);
+                    }}
+                    className={`p-1.5 rounded-lg border text-left flex flex-col gap-0.5 cursor-pointer transition-all ${
+                      metadata.targetAudiolibro
+                        ? "bg-amber-500/10 border-amber-500/40 text-amber-300"
+                        : "bg-slate-900/60 border-slate-850 text-slate-400 hover:border-slate-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px]">🎧</span>
+                      <span className="font-bold truncate">Audiolibro IA</span>
+                    </div>
+                    <span className="text-[7.5px] text-slate-500 leading-tight">
+                      Regalías de voz. Gran boom editorial.
+                    </span>
+                  </button>
+
+                  {/* Kindle Vella */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = { ...metadata, targetVella: !metadata.targetVella };
+                      setMetadata(updated);
+                      saveToLocalStorage(updated, styleSettings, chapters);
+                    }}
+                    className={`p-1.5 rounded-lg border text-left flex flex-col gap-0.5 cursor-pointer transition-all ${
+                      metadata.targetVella
+                        ? "bg-amber-500/10 border-amber-500/40 text-amber-300"
+                        : "bg-slate-900/60 border-slate-850 text-slate-400 hover:border-slate-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px]">🎬</span>
+                      <span className="font-bold truncate">Kindle Vella</span>
+                    </div>
+                    <span className="text-[7.5px] text-slate-500 leading-tight">
+                      Publicaciones por fascículos o series.
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* QUICK FONTS PICKER ON THE SIDEBAR */}
+            <div className="grid grid-cols-2 gap-2.5 pt-1.5 font-sans border-t border-slate-850/80">
+              {/* Title Font Picker */}
+              <div className="space-y-1 relative">
+                <label className="text-[9px] uppercase font-bold text-slate-400 tracking-wide block">Letra de Títulos</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSidebarTitleFontOpen(!isSidebarTitleFontOpen);
+                    setIsSidebarBodyFontOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between text-[11px] bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-amber-500/60 focus:outline-none cursor-pointer select-none truncate transition-colors"
+                >
+                  <span className="truncate pr-1" style={{ fontFamily: `"${styleSettings.fontTitle}", sans-serif` }}>
+                    {styleSettings.fontTitle}
+                  </span>
+                  <ChevronDown className={`w-3 h-3 text-slate-500 shrink-0 transition-transform ${isSidebarTitleFontOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {isSidebarTitleFontOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsSidebarTitleFontOpen(false)} />
+                    <div className="absolute left-0 right-0 mt-1 max-h-[180px] overflow-y-auto bg-slate-900 border border-slate-800 rounded-lg shadow-2xl z-50 divide-y divide-slate-850/60 scrollbar-thin">
+                      {TITLE_FONTS.map((font) => (
+                        <button
+                          key={font.value}
+                          type="button"
+                          onClick={() => {
+                            const updated = { ...styleSettings, fontTitle: font.value };
+                            setStyleSettings(updated);
+                            saveToLocalStorage(metadata, updated, chapters);
+                            setIsSidebarTitleFontOpen(false);
+                          }}
+                          className={`w-full text-left px-2.5 py-1.5 text-[10px] hover:bg-slate-850 transition-colors flex flex-col gap-0.5 cursor-pointer ${
+                            styleSettings.fontTitle === font.value ? "bg-amber-500/10 text-amber-400" : "text-slate-300"
+                          }`}
+                        >
+                          <span className="font-bold">{font.label}</span>
+                          <span className="text-[8px] text-slate-500 italic max-w-full truncate" style={{ fontFamily: `"${font.value}", serif` }}>
+                            {font.sample}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Body Font Picker */}
+              <div className="space-y-1 relative">
+                <label className="text-[9px] uppercase font-bold text-slate-400 tracking-wide block">Letra de Cuerpo</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSidebarBodyFontOpen(!isSidebarBodyFontOpen);
+                    setIsSidebarTitleFontOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between text-[11px] bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-amber-500/60 focus:outline-none cursor-pointer select-none truncate transition-colors"
+                >
+                  <span className="truncate pr-1" style={{ fontFamily: `"${styleSettings.fontBody}", Georgia, serif` }}>
+                    {styleSettings.fontBody}
+                  </span>
+                  <ChevronDown className={`w-3 h-3 text-slate-500 shrink-0 transition-transform ${isSidebarBodyFontOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {isSidebarBodyFontOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsSidebarBodyFontOpen(false)} />
+                    <div className="absolute left-0 right-0 mt-1 max-h-[180px] overflow-y-auto bg-slate-900 border border-slate-800 rounded-lg shadow-2xl z-50 divide-y divide-slate-850/60 scrollbar-thin">
+                      {BODY_FONTS.map((font) => (
+                        <button
+                          key={font.value}
+                          type="button"
+                          onClick={() => {
+                            const updated = { ...styleSettings, fontBody: font.value };
+                            setStyleSettings(updated);
+                            saveToLocalStorage(metadata, updated, chapters);
+                            setIsSidebarBodyFontOpen(false);
+                          }}
+                          className={`w-full text-left px-2.5 py-1.5 text-[10px] hover:bg-slate-850 transition-colors flex flex-col gap-0.5 cursor-pointer ${
+                            styleSettings.fontBody === font.value ? "bg-amber-500/10 text-amber-400" : "text-slate-300"
+                          }`}
+                        >
+                          <span className="font-bold">{font.label}</span>
+                          <span className="text-[8px] text-slate-500 italic max-w-full truncate" style={{ fontFamily: `"${font.value}", serif` }}>
+                            {font.sample}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Core Manuscript Controller & Drag-and-Drop Local File Uploader */}
           <div className="bg-slate-950/85 border border-slate-850/85 rounded-xl p-3 space-y-2.5">
             <div className="flex items-center justify-between">
@@ -4960,55 +5370,51 @@ ${generatedScreenplayText}
                 e.stopPropagation();
                 const files = e.dataTransfer.files;
                 if (files && files.length > 0) {
-                  const file = files[0];
-                  const ext = file.name.split(".").pop()?.toLowerCase();
-                  if (ext === "docx") {
-                    const reader = new FileReader();
-                    reader.onload = async (event) => {
-                      try {
-                        const arrayBuffer = event.target?.result as ArrayBuffer;
-                        if (!arrayBuffer) throw new Error("Archivo de Word vacío.");
-                        const result = await mammoth.extractRawText({ arrayBuffer });
-                        const text = result.value;
-                        if (!text || text.trim() === "") {
-                          throw new Error("No se pudo extraer texto legible del archivo Word.");
-                        }
-                        setRawText(text);
-                        const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
-                        setChapters([
-                          {
-                            chapterNumber: 1,
-                            title: file.name.replace(/\.[^/.]+$/, ""),
-                            paragraphs: lines.slice(0, 15)
-                          }
-                        ]);
-                        triggerStudioToast(`¡Manuscrito Word '${file.name}' leído e incorporado con éxito!`, "success");
-                        sendDagramitoQuery(`He subido mi archivo Word '${file.name}'. Por favor, ayúdame a maquetarlo.`);
-                      } catch (err: any) {
-                        triggerStudioToast(`Error al leer archivo Word: ${err.message || err}`, "error");
-                      }
-                    };
-                    reader.readAsArrayBuffer(file);
-                  } else {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      const text = event.target?.result as string;
-                      if (text) {
-                        setRawText(text);
-                        const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
-                        setChapters([
-                          {
-                            chapterNumber: 1,
-                            title: file.name.replace(/\.[^/.]+$/, ""),
-                            paragraphs: lines.slice(0, 15)
-                          }
-                        ]);
-                        triggerStudioToast(`¡Manuscrito '${file.name}' leído e incorporado!`, "success");
-                        sendDagramitoQuery(`He subido mi archivo '${file.name}'. Por favor, ayúdame a maquetarlo.`);
-                      }
-                    };
-                    reader.readAsText(file);
-                  }
+                   const file = files[0];
+                   const ext = file.name.split(".").pop()?.toLowerCase();
+                   if (ext === "docx") {
+                     const reader = new FileReader();
+                     reader.onload = async (event) => {
+                       try {
+                         const arrayBuffer = event.target?.result as ArrayBuffer;
+                         if (!arrayBuffer) throw new Error("Archivo de Word vacío.");
+                         const result = await mammoth.extractRawText({ arrayBuffer });
+                         const text = result.value;
+                         if (!text || text.trim() === "") {
+                           throw new Error("No se pudo extraer texto legible del archivo Word.");
+                         }
+                         setRawText(text);
+                         const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
+                         setMetadata(prev => {
+                           const updated = { ...prev, title: cleanName };
+                           return updated;
+                         });
+                         handleLocalQuickLayout(text);
+                         triggerStudioToast(`¡Manuscrito Word '${file.name}' leído, estructurado y compaginado con éxito!`, "success");
+                         sendDagramitoQuery(`He subido mi archivo Word '${file.name}'. Por favor, ayúdame a maquetarlo.`);
+                       } catch (err: any) {
+                         triggerStudioToast(`Error al leer archivo Word: ${err.message || err}`, "warning");
+                       }
+                     };
+                     reader.readAsArrayBuffer(file);
+                   } else {
+                     const reader = new FileReader();
+                     reader.onload = (event) => {
+                       const text = event.target?.result as string;
+                       if (text) {
+                         setRawText(text);
+                         const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
+                         setMetadata(prev => {
+                           const updated = { ...prev, title: cleanName };
+                           return updated;
+                         });
+                         handleLocalQuickLayout(text);
+                         triggerStudioToast(`¡Manuscrito '${file.name}' leído, estructurado y compaginado con éxito!`, "success");
+                         sendDagramitoQuery(`He subido mi archivo '${file.name}'. Por favor, ayúdame a maquetarlo.`);
+                       }
+                     };
+                     reader.readAsText(file);
+                   }
                 }
               }}
               className="border border-dashed border-slate-800 hover:border-amber-500/40 bg-slate-900/40 hover:bg-slate-900/80 rounded-lg p-2.5 text-center transition-all cursor-pointer group flex flex-col items-center justify-center gap-1"
@@ -5023,55 +5429,51 @@ ${generatedScreenplayText}
                 onChange={(e) => {
                   const files = e.target.files;
                   if (files && files.length > 0) {
-                    const file = files[0];
-                    const ext = file.name.split(".").pop()?.toLowerCase();
-                    if (ext === "docx") {
-                      const reader = new FileReader();
-                      reader.onload = async (event) => {
-                        try {
-                          const arrayBuffer = event.target?.result as ArrayBuffer;
-                          if (!arrayBuffer) throw new Error("Archivo de Word vacío.");
-                          const result = await mammoth.extractRawText({ arrayBuffer });
-                          const text = result.value;
-                          if (!text || text.trim() === "") {
-                            throw new Error("No se pudo extraer texto legible del archivo Word.");
-                          }
-                          setRawText(text);
-                          const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
-                          setChapters([
-                            {
-                              chapterNumber: 1,
-                              title: file.name.replace(/\.[^/.]+$/, ""),
-                              paragraphs: lines.slice(0, 15)
-                            }
-                          ]);
-                          triggerStudioToast(`¡Manuscrito Word '${file.name}' leído e incorporado con éxito!`, "success");
-                          sendDagramitoQuery(`He subido mi archivo Word '${file.name}'. Por favor, ayúdame a maquetarlo.`);
-                        } catch (err: any) {
-                          triggerStudioToast(`Error al leer archivo Word: ${err.message || err}`, "error");
-                        }
-                      };
-                      reader.readAsArrayBuffer(file);
-                    } else {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        const text = event.target?.result as string;
-                        if (text) {
-                          setRawText(text);
-                          const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
-                          setChapters([
-                            {
-                              chapterNumber: 1,
-                              title: file.name.replace(/\.[^/.]+$/, ""),
-                              paragraphs: lines.slice(0, 15)
-                            }
-                          ]);
-                          triggerStudioToast(`¡Manuscrito '${file.name}' leído e incorporado!`, "success");
-                          sendDagramitoQuery(`He subido mi archivo '${file.name}'. Por favor, ayúdame a maquetarlo.`);
-                        }
-                      };
-                      reader.readAsText(file);
-                    }
+                     const file = files[0];
+                     const ext = file.name.split(".").pop()?.toLowerCase();
+                     if (ext === "docx") {
+                       const reader = new FileReader();
+                       reader.onload = async (event) => {
+                         try {
+                           const arrayBuffer = event.target?.result as ArrayBuffer;
+                           if (!arrayBuffer) throw new Error("Archivo de Word vacío.");
+                           const result = await mammoth.extractRawText({ arrayBuffer });
+                           const text = result.value;
+                           if (!text || text.trim() === "") {
+                             throw new Error("No se pudo extraer texto legible del archivo Word.");
+                           }
+                           setRawText(text);
+                           const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
+                           setMetadata(prev => {
+                             const updated = { ...prev, title: cleanName };
+                             return updated;
+                           });
+                           handleLocalQuickLayout(text);
+                           triggerStudioToast(`¡Manuscrito Word '${file.name}' leído, estructurado y compaginado con éxito!`, "success");
+                           sendDagramitoQuery(`He subido mi archivo Word '${file.name}'. Por favor, ayúdame a maquetarlo.`);
+                         } catch (err: any) {
+                           triggerStudioToast(`Error al leer archivo Word: ${err.message || err}`, "warning");
+                         }
+                       };
+                       reader.readAsArrayBuffer(file);
+                     } else {
+                       const reader = new FileReader();
+                       reader.onload = (event) => {
+                         const text = event.target?.result as string;
+                         if (text) {
+                           setRawText(text);
+                           const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
+                           setMetadata(prev => {
+                             const updated = { ...prev, title: cleanName };
+                             return updated;
+                           });
+                           handleLocalQuickLayout(text);
+                           triggerStudioToast(`¡Manuscrito '${file.name}' leído, estructurado y compaginado con éxito!`, "success");
+                           sendDagramitoQuery(`He subido mi archivo '${file.name}'. Por favor, ayúdame a maquetarlo.`);
+                         }
+                       };
+                       reader.readAsText(file);
+                     }
                   }
                 }}
                 className="hidden"
@@ -5130,6 +5532,7 @@ ${generatedScreenplayText}
               { id: "preset", label: "Estilos", icon: "🎨" },
               { id: "manual", label: "Configuración", icon: "⚙️" },
               { id: "content", label: "Capítulos", icon: "📖" },
+              { id: "compatibility", label: "Imprenta / KDP", icon: "📐" },
               { id: "copyright", label: "Derechos / Portada", icon: "⚖️" },
               { id: "multimedia", label: "Voces", icon: "🎙️" },
               { id: "screenplay", label: "Guión", icon: "🎬" }
@@ -5548,7 +5951,7 @@ ${generatedScreenplayText}
                         className="w-full text-xs bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-lg p-2 text-slate-100 focus:outline-none"
                       />
                     </div>
-                    <div className="space-y-1 col-span-2">
+                    <div className="space-y-1 col-span-2 sm:col-span-1">
                       <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wide block">Sello Editorial / Publisher</label>
                       <input
                         type="text"
@@ -5559,6 +5962,20 @@ ${generatedScreenplayText}
                           saveToLocalStorage(updated, styleSettings, chapters);
                         }}
                         placeholder="Ej: Imprenta de Juan de la Cuesta"
+                        className="w-full text-xs bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-lg p-2 text-slate-100 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1 col-span-2 sm:col-span-1">
+                      <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wide block">Tipo de Libro / Género</label>
+                      <input
+                        type="text"
+                        value={metadata.genre || ""}
+                        onChange={(e) => {
+                          const updated = { ...metadata, genre: e.target.value };
+                          setMetadata(updated);
+                          saveToLocalStorage(updated, styleSettings, chapters);
+                        }}
+                        placeholder="Ej: Novela, Poesía, Ensayo..."
                         className="w-full text-xs bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-lg p-2 text-slate-100 focus:outline-none"
                       />
                     </div>
@@ -6521,7 +6938,7 @@ ${generatedScreenplayText}
                   </button>
 
                   <button
-                    onClick={handleLocalQuickLayout}
+                    onClick={() => handleLocalQuickLayout()}
                     disabled={formattingText || !rawText.trim()}
                     className="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                     title="Compaginador rápido sin servidores ni claves para procesamientos sencillos en navegador."
