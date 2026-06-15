@@ -30,6 +30,7 @@ import {
   Image as ImageIcon,
   Trash2,
   Plus,
+  Minus,
   Briefcase,
   TrendingUp,
   ShieldCheck,
@@ -335,6 +336,65 @@ export default function App() {
   });
 
   const [styleSettings, setStyleSettings] = useState<BookStyleSettings>(ARCHETYPES.classic);
+  const [chapterPageBreak, setChapterPageBreak] = useState<boolean>(true);
+
+  const cycleTitleFont = (direction: "prev" | "next") => {
+    const currentIndex = TITLE_FONTS.findIndex(f => f.value === styleSettings.fontTitle);
+    if (currentIndex === -1) return;
+    let nextIndex = currentIndex;
+    if (direction === "next") {
+      nextIndex = (currentIndex + 1) % TITLE_FONTS.length;
+    } else {
+      nextIndex = (currentIndex - 1 + TITLE_FONTS.length) % TITLE_FONTS.length;
+    }
+    const updated = { ...styleSettings, fontTitle: TITLE_FONTS[nextIndex].value };
+    setStyleSettings(updated);
+    saveToLocalStorage(metadata, updated, chapters);
+  };
+
+  const cycleBodyFont = (direction: "prev" | "next") => {
+    const currentIndex = BODY_FONTS.findIndex(f => f.value === styleSettings.fontBody);
+    if (currentIndex === -1) return;
+    let nextIndex = currentIndex;
+    if (direction === "next") {
+      nextIndex = (currentIndex + 1) % BODY_FONTS.length;
+    } else {
+      nextIndex = (currentIndex - 1 + BODY_FONTS.length) % BODY_FONTS.length;
+    }
+    const updated = { ...styleSettings, fontBody: BODY_FONTS[nextIndex].value };
+    setStyleSettings(updated);
+    saveToLocalStorage(metadata, updated, chapters);
+  };
+
+  const cycleTitleSize = (direction: "prev" | "next") => {
+    const sizes: ("small" | "medium" | "large")[] = ["small", "medium", "large"];
+    const currentSize = styleSettings.fontSizeTitle || "large";
+    const currentIndex = sizes.indexOf(currentSize);
+    let nextIndex = currentIndex;
+    if (direction === "next") {
+      nextIndex = (currentIndex + 1) % sizes.length;
+    } else {
+      nextIndex = (currentIndex - 1 + sizes.length) % sizes.length;
+    }
+    const updated = { ...styleSettings, fontSizeTitle: sizes[nextIndex] };
+    setStyleSettings(updated);
+    saveToLocalStorage(metadata, updated, chapters);
+  };
+
+  const cycleBodySize = (direction: "prev" | "next") => {
+    const sizes: ("small" | "medium" | "large")[] = ["small", "medium", "large"];
+    const currentSize = styleSettings.fontSizeBody || "medium";
+    const currentIndex = sizes.indexOf(currentSize);
+    let nextIndex = currentIndex;
+    if (direction === "next") {
+      nextIndex = (currentIndex + 1) % sizes.length;
+    } else {
+      nextIndex = (currentIndex - 1 + sizes.length) % sizes.length;
+    }
+    const updated = { ...styleSettings, fontSizeBody: sizes[nextIndex] };
+    setStyleSettings(updated);
+    saveToLocalStorage(metadata, updated, chapters);
+  };
   
   // Calligraphic state checkers for gorgeous typographies and hierarchical styling
   const isCalligraphic = ["Great Vibes", "Pinyon Script", "Alex Brush"].includes(styleSettings.fontTitle);
@@ -1016,6 +1076,10 @@ export default function App() {
         setKdpTrimSize("6in_9in");
       }
     }
+    const storedChapterPageBreak = localStorage.getItem("chapter_page_break");
+    if (storedChapterPageBreak !== null) {
+      setChapterPageBreak(storedChapterPageBreak === "true");
+    }
     if (storedCustomPubs) {
       try { setCustomPublishers(JSON.parse(storedCustomPubs)); } catch(e) {}
     }
@@ -1048,6 +1112,7 @@ export default function App() {
     localStorage.setItem("editorial_meta", JSON.stringify(newMeta));
     localStorage.setItem("editorial_style", JSON.stringify(newStyle));
     localStorage.setItem("editorial_trim_size", newTrimSize);
+    localStorage.setItem("chapter_page_break", JSON.stringify(chapterPageBreak));
 
     // Debounce the heavy, massive object serialization (especially chapters, which block the core UI thread)
     if (saveTimeoutRef.current) {
@@ -1134,7 +1199,7 @@ export default function App() {
   // Re-paginate whenever style settings, chapters, physical trim size, illustrated book or credits page toggle change
   useEffect(() => {
     paginateBook();
-  }, [chapters, styleSettings, kdpTrimSize, illustratedBook, includeCreditsPage, includeTableOfContents, tocTitle]);
+  }, [chapters, styleSettings, kdpTrimSize, illustratedBook, includeCreditsPage, includeTableOfContents, tocTitle, chapterPageBreak]);
 
   const paginateBook = () => {
     if (chapters.length === 0) {
@@ -1190,20 +1255,28 @@ export default function App() {
       });
     }
 
+    // Single consistent state handles both paginations
+    let chapterPageNum = 1;
+    let pageParagraphs: string[] = [];
+    let pageIllustrations: Illustration[] = [];
+    let currentLength = 0;
+
     chapters.forEach((chap) => {
       if (!chap || !chap.paragraphs || !Array.isArray(chap.paragraphs)) return;
 
-      // Each chapter starts on a new page (frequently odd pages in real books, but definitely a new layout page)
-      let chapterPageNum = 1;
+      if (chapterPageBreak) {
+        // Normal mode: each chapter starts clean on a new page, resetting the page buffer
+        chapterPageNum = 1;
+        pageParagraphs = [];
+        pageIllustrations = [];
+        currentLength = 0;
+      } else {
+        // Continuous mode: we inject an inline chapter marker heading into the existing page paragraphs
+        pageParagraphs.push(`__CHAPTER_OPENER_INLINE__:${chap.chapterNumber}:${chap.title}`);
+        currentLength += chap.title.length + 150;
+      }
 
-      // Create page buffers
-      let pageParagraphs: string[] = [];
-      let pageIllustrations: Illustration[] = [];
-      let currentLength = 0;
-
-      // Filter illustrations for this chapter if illustrated setting is enabled
       const chapIllustrations = illustratedBook ? (chap.illustrations || []) : [];
-
       let paraIdx = 0;
       const totalParas = chap.paragraphs.length;
 
@@ -1213,7 +1286,7 @@ export default function App() {
           paraIdx++;
           continue;
         }
-        const capLimit = chapterPageNum === 1 ? charCapacityOpener : charCapacityBody;
+        const capLimit = (chapterPageBreak && chapterPageNum === 1) ? charCapacityOpener : charCapacityBody;
 
         // Check if there are any illustrations placed AFTER this paragraph (i.e. paragraphIndex === paraIdx)
         const associatedIllustrations = chapIllustrations.filter(
@@ -1222,7 +1295,6 @@ export default function App() {
 
         let illustrationCost = 0;
         associatedIllustrations.forEach((ill) => {
-          // Subtract characters capacity based on illustration width
           if (ill.alignment === "full") {
             illustrationCost += 400;
           } else {
@@ -1251,7 +1323,7 @@ export default function App() {
             chapterNumber: chap.chapterNumber,
             chapterTitle: chap.title,
             paragraphs: pageParagraphs,
-            isChapterOpener: chapterPageNum === 1,
+            isChapterOpener: chapterPageBreak && chapterPageNum === 1,
             illustrations: pageIllustrations.length > 0 ? pageIllustrations : undefined
           });
 
@@ -1263,8 +1335,8 @@ export default function App() {
         }
       }
 
-      // Add last page for the chapter
-      if (pageParagraphs.length > 0) {
+      // Add last page for the chapter ONLY if we are in chapter page break mode
+      if (chapterPageBreak && pageParagraphs.length > 0) {
         simulated.push({
           pageNumber: absolutePageCounter++,
           chapterNumber: chap.chapterNumber,
@@ -1276,9 +1348,27 @@ export default function App() {
       }
     });
 
+    // If we are in continuous mode and there is leftover content, commit the final buffer!
+    if (!chapterPageBreak && pageParagraphs.length > 0) {
+      const finalChapter = chapters[chapters.length - 1];
+      simulated.push({
+        pageNumber: absolutePageCounter++,
+        chapterNumber: finalChapter?.chapterNumber || 1,
+        chapterTitle: finalChapter?.title || "",
+        paragraphs: pageParagraphs,
+        isChapterOpener: false,
+        illustrations: pageIllustrations.length > 0 ? pageIllustrations : undefined
+      });
+    }
+
     setPages(simulated);
-    // Reset index safely
-    setCurrentPageIndex(0);
+    // Keep page index safely within bounds instead of hard resetting to 0, preventing frustrating view jumps!
+    setCurrentPageIndex(prev => {
+      if (prev >= simulated.length) {
+        return Math.max(0, simulated.length - 1);
+      }
+      return prev;
+    });
   };
 
   // --- API SERVICE CALLS ---
@@ -3092,6 +3182,22 @@ export default function App() {
                   }}
                 >
                   {p.paragraphs.map((para, ind) => {
+                    if (para && typeof para === "string" && para.startsWith("__CHAPTER_OPENER_INLINE__:")) {
+                      const parts = para.split(":");
+                      const num = parts[1];
+                      const title = parts[2] || "";
+                      return (
+                        <div key={ind} className="my-3 text-center space-y-1 py-1 select-none">
+                          <span className="text-[7.5px] tracking-wider uppercase font-semibold text-amber-800/85 block" style={{ fontFamily: `"${styleSettings.fontTitle}", serif` }}>
+                            Capítulo {num}
+                          </span>
+                          <h4 className="text-[9.5px] font-bold text-slate-800 tracking-tight leading-tight" style={{ fontFamily: `"${styleSettings.fontTitle}", serif` }}>
+                            {title}
+                          </h4>
+                        </div>
+                      );
+                    }
+
                     const isFirst = ind === 0 && p.isChapterOpener;
                     if (isFirst && styleSettings.dropCap) {
                       const letter = para.charAt(0);
@@ -5989,195 +6095,480 @@ ${generatedScreenplayText}
                     Tipografía Editorial
                   </h4>
                   
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3 pb-3">
+                    {/* FUENTE TITULO */}
                     <div className="space-y-1.5 col-span-2 md:col-span-1">
                       <label className="text-[11px] text-slate-400 font-medium flex items-center justify-between">
                         <span>Fuente para Cabezales y Títulos:</span>
-                        <span className="text-[10px] text-slate-500 font-mono">Google Web Fonts</span>
+                        <span className="text-[10px] text-slate-500 font-mono">Desplazable</span>
                       </label>
                       
-                      <div className="relative">
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => {
-                            setIsTitleFontDropdownOpen(!isTitleFontDropdownOpen);
-                            setIsBodyFontDropdownOpen(false);
-                          }}
-                          className="w-full flex items-center justify-between text-xs bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none focus:border-amber-500 cursor-pointer transition-colors"
+                          onClick={() => cycleTitleFont("prev")}
+                          className="px-2.5 py-3 bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-850 text-slate-350 hover:text-amber-400 rounded-lg cursor-pointer transition-all"
+                          title="Anterior fuente"
                         >
-                          <div className="flex flex-col items-start gap-0.5 text-left truncate max-w-[85%]">
-                            <span className="font-semibold text-slate-350">{styleSettings.fontTitle}</span>
-                            <span className="text-[10.5px] text-amber-500/90 italic font-medium truncate w-full" style={{ fontFamily: `"${styleSettings.fontTitle}", serif` }}>
-                              Vista Previa Editorial
-                            </span>
-                          </div>
-                          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isTitleFontDropdownOpen ? "rotate-180" : ""}`} />
+                          <ChevronLeft className="w-4 h-4" />
                         </button>
+                        
+                        <div className="relative flex-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsTitleFontDropdownOpen(!isTitleFontDropdownOpen);
+                              setIsBodyFontDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center justify-between text-xs bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none focus:border-amber-500 cursor-pointer transition-colors"
+                          >
+                            <div className="flex flex-col items-start gap-0.5 text-left truncate max-w-[85%]">
+                              <span className="font-semibold text-slate-350">{styleSettings.fontTitle}</span>
+                              <span className="text-[10.5px] text-amber-500/90 italic font-medium truncate w-full" style={{ fontFamily: `"${styleSettings.fontTitle}", serif` }}>
+                                Vista Previa Editorial
+                              </span>
+                            </div>
+                            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isTitleFontDropdownOpen ? "rotate-180" : ""}`} />
+                          </button>
 
-                        {/* Invisible click-out overlay */}
-                        {isTitleFontDropdownOpen && (
-                          <div 
-                            className="fixed inset-0 z-25 cursor-default" 
-                            onClick={() => setIsTitleFontDropdownOpen(false)} 
-                          />
-                        )}
+                          {/* Invisible click-out overlay */}
+                          {isTitleFontDropdownOpen && (
+                            <div 
+                              className="fixed inset-0 z-25 cursor-default" 
+                              onClick={() => setIsTitleFontDropdownOpen(false)} 
+                            />
+                          )}
 
-                        {isTitleFontDropdownOpen && (
-                          <div className="absolute left-0 right-0 mt-1 max-h-[290px] overflow-y-auto bg-slate-900 border border-slate-800 rounded-lg shadow-2xl z-30 divide-y divide-slate-850/50 scrollbar-thin">
-                            {TITLE_FONTS.map((font) => {
-                              const isSelected = styleSettings.fontTitle === font.value;
-                              return (
-                                <button
-                                  key={font.value}
-                                  type="button"
-                                  onClick={() => {
-                                    const updated = { ...styleSettings, fontTitle: font.value };
-                                    setStyleSettings(updated);
-                                    saveToLocalStorage(metadata, updated, chapters);
-                                    setIsTitleFontDropdownOpen(false);
-                                  }}
-                                  className={`w-full text-left p-2.5 transition-colors flex flex-col gap-1 cursor-pointer ${
-                                    isSelected ? "bg-amber-500/15 hover:bg-amber-500/20" : "hover:bg-slate-850/80"
-                                  }`}
-                                >
-                                  <div className="flex items-center justify-between gap-1">
-                                    <span className={`text-[11.5px] ${isSelected ? "text-amber-400 font-bold" : "text-slate-200"}`}>
-                                      {font.label}
-                                    </span>
-                                    <span className="text-[8.5px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-950 text-slate-400 font-mono border border-slate-850 shrink-0">
-                                      {font.cat}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-3 mt-0.5">
-                                    <span className="text-[9.5px] text-slate-500 truncate max-w-[130px]">{font.desc}</span>
-                                    <span 
-                                      className={`text-sm tracking-wide shrink-0 ${isSelected ? "text-amber-300" : "text-slate-400"}`}
-                                      style={{ fontFamily: `"${font.value}", serif` }}
-                                    >
-                                      {font.sample}
-                                    </span>
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
+                          {isTitleFontDropdownOpen && (
+                            <div className="absolute left-0 right-0 mt-1 max-h-[290px] overflow-y-auto bg-slate-900 border border-slate-800 rounded-lg shadow-2xl z-30 divide-y divide-slate-850/50 scrollbar-thin">
+                              {TITLE_FONTS.map((font) => {
+                                const isSelected = styleSettings.fontTitle === font.value;
+                                return (
+                                  <button
+                                    key={font.value}
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = { ...styleSettings, fontTitle: font.value };
+                                      setStyleSettings(updated);
+                                      saveToLocalStorage(metadata, updated, chapters);
+                                      setIsTitleFontDropdownOpen(false);
+                                    }}
+                                    className={`w-full text-left p-2.5 transition-colors flex flex-col gap-1 cursor-pointer ${
+                                      isSelected ? "bg-amber-500/15 hover:bg-amber-500/20" : "hover:bg-slate-850/80"
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between gap-1">
+                                      <span className={`text-[11.5px] ${isSelected ? "text-amber-400 font-bold" : "text-slate-200"}`}>
+                                        {font.label}
+                                      </span>
+                                      <span className="text-[8.5px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-950 text-slate-400 font-mono border border-slate-850 shrink-0">
+                                        {font.cat}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-3 mt-0.5">
+                                      <span className="text-[9.5px] text-slate-500 truncate max-w-[130px]">{font.desc}</span>
+                                      <span 
+                                        className={`text-sm tracking-wide shrink-0 ${isSelected ? "text-amber-300" : "text-slate-400"}`}
+                                        style={{ fontFamily: `"${font.value}", serif` }}
+                                      >
+                                        {font.sample}
+                                      </span>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => cycleTitleFont("next")}
+                          className="px-2.5 py-3 bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-850 text-slate-350 hover:text-amber-400 rounded-lg cursor-pointer transition-all"
+                          title="Siguiente fuente"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
 
+                    {/* TAMAÑO TITULO */}
                     <div className="space-y-1.5 col-span-2 md:col-span-1">
                       <label className="text-[11px] text-slate-400 font-medium flex items-center justify-between">
                         <span>Tamaño de Título:</span>
                         <span className="text-[10px] text-slate-500 font-mono">Maquetación H2</span>
                       </label>
-                      <select
-                        value={styleSettings.fontSizeTitle || "large"}
-                        onChange={(e) => {
-                          const updated = { ...styleSettings, fontSizeTitle: e.target.value as any };
-                          setStyleSettings(updated);
-                          saveToLocalStorage(metadata, updated, chapters);
-                        }}
-                        className="w-full text-xs bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none focus:border-amber-500 cursor-pointer"
-                      >
-                        <option value="small">Sutil (~20px)</option>
-                        <option value="medium">Estándar (~25px)</option>
-                        <option value="large">Prominente (~33.6px)</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5 col-span-2 md:col-span-1">
-                      <label className="text-[11px] text-slate-400 font-medium flex items-center justify-between">
-                        <span>Fuente Cuerpo del Libro (Muy Importante):</span>
-                        <span className="text-[10px] text-slate-500 font-mono">Legibilidad de Cerca</span>
-                      </label>
                       
-                      <div className="relative">
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => {
-                            setIsBodyFontDropdownOpen(!isBodyFontDropdownOpen);
-                            setIsTitleFontDropdownOpen(false);
-                          }}
-                          className="w-full flex items-center justify-between text-xs bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none focus:border-amber-500 cursor-pointer transition-colors"
+                          onClick={() => cycleTitleSize("prev")}
+                          className="px-2.5 py-3 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-350 hover:text-amber-400 rounded-lg cursor-pointer transition-colors shrink-0"
+                          title="Anterior tamaño"
                         >
-                          <div className="flex flex-col items-start gap-0.5 text-left truncate max-w-[85%]">
-                            <span className="font-semibold text-slate-350">{styleSettings.fontBody}</span>
-                            <span className="text-[10.5px] text-amber-500/90 italic font-medium truncate w-full" style={{ fontFamily: `"${styleSettings.fontBody}", serif` }}>
-                              Lectura Maquetada
-                            </span>
-                          </div>
-                          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isBodyFontDropdownOpen ? "rotate-180" : ""}`} />
+                          <Minus className="w-3.5 h-3.5" />
                         </button>
+                        
+                        <div className="w-full text-xs font-semibold py-2.5 bg-slate-950 border border-slate-850 text-slate-200 text-center rounded-lg leading-[1.65] select-none uppercase tracking-wider font-mono">
+                          {styleSettings.fontSizeTitle === "small" 
+                            ? "Sutil (~20px)" 
+                            : styleSettings.fontSizeTitle === "medium" 
+                            ? "Estándar (~25px)" 
+                            : "Prominente (~33.6px)"}
+                        </div>
 
-                        {/* Invisible click-out overlay */}
-                        {isBodyFontDropdownOpen && (
-                          <div 
-                            className="fixed inset-0 z-25 cursor-default" 
-                            onClick={() => setIsBodyFontDropdownOpen(false)} 
-                          />
-                        )}
-
-                        {isBodyFontDropdownOpen && (
-                          <div className="absolute left-0 right-0 mt-1 max-h-[250px] overflow-y-auto bg-slate-900 border border-slate-800 rounded-lg shadow-2xl z-30 divide-y divide-slate-850/50 scrollbar-thin">
-                            {BODY_FONTS.map((font) => {
-                              const isSelected = styleSettings.fontBody === font.value;
-                              return (
-                                <button
-                                  key={font.value}
-                                  type="button"
-                                  onClick={() => {
-                                    const updated = { ...styleSettings, fontBody: font.value };
-                                    setStyleSettings(updated);
-                                    saveToLocalStorage(metadata, updated, chapters);
-                                    setIsBodyFontDropdownOpen(false);
-                                  }}
-                                  className={`w-full text-left p-2.5 transition-colors flex flex-col gap-1 cursor-pointer ${
-                                    isSelected ? "bg-amber-500/15 hover:bg-amber-500/20" : "hover:bg-slate-850/80"
-                                  }`}
-                                >
-                                  <div className="flex items-center justify-between gap-1">
-                                    <span className={`text-[11.5px] ${isSelected ? "text-amber-400 font-bold" : "text-slate-200"}`}>
-                                      {font.label}
-                                    </span>
-                                    <span className="text-[8.5px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-950 text-slate-300 font-mono border border-slate-850 shrink-0">
-                                      {font.cat}
-                                    </span>
-                                  </div>
-                                  <div className="mt-0.5">
-                                    <p className="text-[9.5px] text-slate-500 leading-tight mb-1">{font.desc}</p>
-                                    <p 
-                                      className={`text-[10.5px] leading-relaxed truncate ${isSelected ? "text-amber-300/95" : "text-slate-400"}`}
-                                      style={{ fontFamily: `"${font.value}", serif` }}
-                                    >
-                                      {font.sample}
-                                    </p>
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => cycleTitleSize("next")}
+                          className="px-2.5 py-3 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-350 hover:text-amber-400 rounded-lg cursor-pointer transition-colors shrink-0"
+                          title="Siguiente tamaño"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
 
+                    {/* FUENTE CUERPO */}
+                    <div className="space-y-1.5 col-span-2 md:col-span-1">
+                      <label className="text-[11px] text-slate-400 font-medium flex items-center justify-between">
+                        <span>Fuente Cuerpo del Libro (Muy Importante):</span>
+                        <span className="text-[10px] text-slate-500 font-mono">Desplazable</span>
+                      </label>
+                      
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => cycleBodyFont("prev")}
+                          className="px-2.5 py-3 bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-850 text-slate-350 hover:text-amber-400 rounded-lg cursor-pointer transition-all"
+                          title="Anterior fuente cuerpo"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+
+                        <div className="relative flex-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsBodyFontDropdownOpen(!isBodyFontDropdownOpen);
+                              setIsTitleFontDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center justify-between text-xs bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none focus:border-amber-500 cursor-pointer transition-colors"
+                          >
+                            <div className="flex flex-col items-start gap-0.5 text-left truncate max-w-[85%]">
+                              <span className="font-semibold text-slate-350">{styleSettings.fontBody}</span>
+                              <span className="text-[10.5px] text-amber-500/90 italic font-medium truncate w-full" style={{ fontFamily: `"${styleSettings.fontBody}", serif` }}>
+                                Lectura Maquetada
+                              </span>
+                            </div>
+                            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isBodyFontDropdownOpen ? "rotate-180" : ""}`} />
+                          </button>
+
+                          {/* Invisible click-out overlay */}
+                          {isBodyFontDropdownOpen && (
+                            <div 
+                              className="fixed inset-0 z-25 cursor-default" 
+                              onClick={() => setIsBodyFontDropdownOpen(false)} 
+                            />
+                          )}
+
+                          {isBodyFontDropdownOpen && (
+                            <div className="absolute left-0 right-0 mt-1 max-h-[250px] overflow-y-auto bg-slate-900 border border-slate-800 rounded-lg shadow-2xl z-30 divide-y divide-slate-850/50 scrollbar-thin">
+                              {BODY_FONTS.map((font) => {
+                                const isSelected = styleSettings.fontBody === font.value;
+                                return (
+                                  <button
+                                    key={font.value}
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = { ...styleSettings, fontBody: font.value };
+                                      setStyleSettings(updated);
+                                      saveToLocalStorage(metadata, updated, chapters);
+                                      setIsBodyFontDropdownOpen(false);
+                                    }}
+                                    className={`w-full text-left p-2.5 transition-colors flex flex-col gap-1 cursor-pointer ${
+                                      isSelected ? "bg-amber-500/15 hover:bg-amber-500/20" : "hover:bg-slate-850/80"
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between gap-1">
+                                      <span className={`text-[11.5px] ${isSelected ? "text-amber-400 font-bold" : "text-slate-200"}`}>
+                                        {font.label}
+                                      </span>
+                                      <span className="text-[8.5px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-950 text-slate-300 font-mono border border-slate-850 shrink-0">
+                                        {font.cat}
+                                      </span>
+                                    </div>
+                                    <div className="mt-0.5">
+                                      <p className="text-[9.5px] text-slate-500 leading-tight mb-1">{font.desc}</p>
+                                      <p 
+                                        className={`text-[10.5px] leading-relaxed truncate ${isSelected ? "text-amber-300/95" : "text-slate-400"}`}
+                                        style={{ fontFamily: `"${font.value}", serif` }}
+                                      >
+                                        {font.sample}
+                                      </p>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => cycleBodyFont("next")}
+                          className="px-2.5 py-3 bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-850 text-slate-350 hover:text-amber-400 rounded-lg cursor-pointer transition-all"
+                          title="Siguiente fuente cuerpo"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* TAMAÑO CUERPO */}
                     <div className="space-y-1.5 col-span-2 md:col-span-1">
                       <label className="text-[11px] text-slate-400 font-medium flex items-center justify-between">
                         <span>Tamaño de Cuerpo (Párrafo):</span>
                         <span className="text-[10px] text-slate-500 font-mono">Lectura Confortable</span>
                       </label>
-                      <select
-                        value={styleSettings.fontSizeBody || "medium"}
-                        onChange={(e) => {
-                          const updated = { ...styleSettings, fontSizeBody: e.target.value as any };
-                          setStyleSettings(updated);
-                          saveToLocalStorage(metadata, updated, chapters);
-                        }}
-                        className="w-full text-xs bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none focus:border-amber-500 cursor-pointer"
-                      >
-                        <option value="small">Compacto (~12.5px)</option>
-                        <option value="medium">Equilibrado (~14px)</option>
-                        <option value="large">Grande (~15.5px)</option>
-                      </select>
+                      
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => cycleBodySize("prev")}
+                          className="px-2.5 py-3 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-350 hover:text-amber-400 rounded-lg cursor-pointer transition-colors shrink-0"
+                          title="Anterior tamaño cuerpo"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        
+                        <div className="w-full text-xs font-semibold py-2.5 bg-slate-950 border border-slate-850 text-slate-200 text-center rounded-lg leading-[1.65] select-none uppercase tracking-wider font-mono">
+                          {styleSettings.fontSizeBody === "small" 
+                            ? "Compacto (~12.5px)" 
+                            : styleSettings.fontSizeBody === "large" 
+                            ? "Grande (~15.5px)" 
+                            : "Equilibrado (~14px)"}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => cycleBodySize("next")}
+                          className="px-2.5 py-3 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-350 hover:text-amber-400 rounded-lg cursor-pointer transition-colors shrink-0"
+                          title="Siguiente tamaño cuerpo"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* FONT PAIRING & EDITORIAL BEAUTY SUGGESTIONS */}
+                  <div className="space-y-4 pt-2">
+                    {/* PARAJAS SUGERIDAS */}
+                    <div className="bg-slate-900/45 border border-slate-850 rounded-xl p-4 space-y-3.5">
+                      <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                        <span className="text-xs uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1.5 font-mono">
+                          💡 Combinación de Letras Sugeridas para Títulos y Subtítulos
+                        </span>
+                        <span className="text-[8px] uppercase bg-slate-950 border border-slate-850 rounded px-1.5 py-0.5 text-slate-400 font-mono">
+                          Parejas Recomendadas
+                        </span>
+                      </div>
+                      
+                      <p className="text-[11px] text-slate-405 leading-normal">
+                        Elige una de las combinaciones recomendadas para coordinar instantáneamente la jerarquía visual de tus títulos y el texto del libro:
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                        {[
+                          {
+                            name: "El Quijote Tradicional",
+                            titleFont: "Cormorant Garamond",
+                            bodyFont: "EB Garamond",
+                            desc: "Lírico, clásico y de lectura prolongada.",
+                            badge: "Clásico"
+                          },
+                          {
+                            name: "Novela de Intriga & Lino",
+                            titleFont: "Playfair Display",
+                            bodyFont: "Lora",
+                            desc: "Contraste moderno, cálido e intimista.",
+                            badge: "Contemporáneo"
+                          },
+                          {
+                            name: "Saga Legendaria Romana",
+                            titleFont: "Cinzel",
+                            bodyFont: "Crimson Pro",
+                            desc: "Estilo épico, heráldico y medieval suntuoso.",
+                            badge: "Histórico"
+                          },
+                          {
+                            name: "Vanguardia Progresiva",
+                            titleFont: "Outfit",
+                            bodyFont: "Inter",
+                            desc: "Márgenes pulidos de lectura urbana y ágil.",
+                            badge: "Moderno"
+                          },
+                          {
+                            name: "Poesía & Ensueño Romántico",
+                            titleFont: "Great Vibes",
+                            bodyFont: "Lora",
+                            desc: "Tipografía caligráfica con prosa estilizada.",
+                            badge: "Poesía"
+                          }
+                        ].map((pair) => {
+                          const isSelected = styleSettings.fontTitle === pair.titleFont && styleSettings.fontBody === pair.bodyFont;
+                          return (
+                            <button
+                              key={pair.name}
+                              type="button"
+                              onClick={() => {
+                                const updated = {
+                                  ...styleSettings,
+                                  fontTitle: pair.titleFont,
+                                  fontBody: pair.bodyFont
+                                };
+                                setStyleSettings(updated);
+                                saveToLocalStorage(metadata, updated, chapters);
+                              }}
+                              className={`p-2.5 rounded-lg border text-left flex flex-col gap-1 cursor-pointer transition-all duration-150 ${
+                                isSelected
+                                  ? "bg-amber-500/10 border-amber-500/70 text-amber-300"
+                                  : "bg-slate-950/40 border-slate-850 hover:bg-slate-850 hover:border-slate-800 text-slate-300"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-[11px] text-slate-100">{pair.name}</span>
+                                <span className="text-[7.5px] uppercase font-bold px-1.5 py-0.2 rounded bg-slate-950 text-slate-400 font-mono border border-slate-850">
+                                  {pair.badge}
+                                </span>
+                              </div>
+                              <div className="font-mono text-[9px] text-slate-450 flex items-center gap-1 leading-none mt-0.5">
+                                <span className="text-amber-500 font-semibold">{pair.titleFont}</span>
+                                <span>+</span>
+                                <span className="text-slate-300">{pair.bodyFont}</span>
+                              </div>
+                              <p className="text-[10.5px] text-slate-450 leading-snug mt-1">
+                                {pair.desc}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* ESTILOS DE BELLEZA EDITORIAL PRECONFIGURADOS */}
+                    <div className="bg-slate-900/45 border border-slate-850 rounded-xl p-4 space-y-3.5">
+                      <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                        <span className="text-xs uppercase font-bold text-indigo-400 tracking-wider flex items-center gap-1.5 font-mono">
+                          ✨ Estilos de Sugerencia para Páginas (Belleza Editorial)
+                        </span>
+                        <span className="text-[8px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono uppercase">
+                          Maquetación Especial
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-slate-400 leading-normal">
+                        Eleva la presentación física de tu manuscrito. Aplica recetas de márgenes, capitulares y detalles ornamentales que utilizan las casas editoriales más prestigiosas del mundo:
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                        {[
+                          {
+                            name: "Edición Coleccionista Lujo",
+                            settings: {
+                              marginSize: "normal",
+                              lineHeight: "relaxed",
+                              dropCap: true,
+                              dropCapStyle: "ornately",
+                              dividerStyle: "flourish",
+                              dividerChar: "❦",
+                              pageColor: "cream",
+                              runningHeaderStyle: "title-chapter"
+                            } as const,
+                            desc: "Inspirada en ediciones del siglo XVIII con amplios fondos, capitulares heráldicas y papel crema suntuoso.",
+                            emoji: "⚜️"
+                          },
+                          {
+                            name: "Novela Negra de Bolsillo",
+                            settings: {
+                              marginSize: "compact",
+                              lineHeight: "snug",
+                              dropCap: true,
+                              dropCapStyle: "modern",
+                              dividerStyle: "geometric",
+                              dividerChar: "❖",
+                              pageColor: "white",
+                              runningHeaderStyle: "chapter-page"
+                            } as const,
+                            desc: "Maquetación de alto contraste, márgenes ajustados para máximo aprovechamiento y capitulares de palo seco dinámicas.",
+                            emoji: "🕵️"
+                          },
+                          {
+                            name: "Crónicas de Fantasía Rústica",
+                            settings: {
+                              marginSize: "wide",
+                              lineHeight: "relaxed",
+                              dropCap: true,
+                              dropCapStyle: "ornately",
+                              dividerStyle: "diamonds",
+                              dividerChar: "✦  ✦  ✦",
+                              pageColor: "sepia",
+                              runningHeaderStyle: "title-chapter"
+                            } as const,
+                            desc: "Tono añejo y místico en papel sepia texturizado, con amplias barras de descanso y separadores de diamantes arcanos.",
+                            emoji: "🐉"
+                          },
+                          {
+                            name: "Minimalismo Ensayístico",
+                            settings: {
+                              marginSize: "normal",
+                              lineHeight: "relaxed",
+                              dropCap: false,
+                              dropCapStyle: "minimal",
+                              dividerStyle: "none",
+                              dividerChar: "—",
+                              pageColor: "white",
+                              runningHeaderStyle: "none"
+                            } as const,
+                            desc: "Limpieza tipográfica absoluta para no distraer. Enfocado en el ritmo continuo del texto y la estructura sobria.",
+                            emoji: "📜"
+                          }
+                        ].map((recipe) => {
+                          const isSelected = 
+                            styleSettings.marginSize === recipe.settings.marginSize &&
+                            styleSettings.pageColor === recipe.settings.pageColor &&
+                            styleSettings.dropCap === recipe.settings.dropCap;
+
+                          return (
+                            <button
+                              key={recipe.name}
+                              type="button"
+                              onClick={() => {
+                                const updated = {
+                                  ...styleSettings,
+                                  ...recipe.settings,
+                                  archetype: "Belleza Personalizada: " + recipe.name
+                                };
+                                setStyleSettings(updated);
+                                saveToLocalStorage(metadata, updated, chapters);
+                              }}
+                              className={`p-2.5 rounded-lg border text-left flex flex-col gap-1 cursor-pointer transition-all duration-150 ${
+                                isSelected
+                                  ? "bg-indigo-500/10 border-indigo-500/70 text-indigo-300"
+                                  : "bg-slate-950/40 border-slate-850 hover:bg-slate-850 hover:border-slate-800 text-slate-300"
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-base shrink-0">{recipe.emoji}</span>
+                                <span className="font-bold text-[11px] text-slate-100">{recipe.name}</span>
+                              </div>
+                              <p className="text-[10.5px] text-slate-450 leading-snug">
+                                {recipe.desc}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -6545,6 +6936,36 @@ ${generatedScreenplayText}
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* --- SECCIÓN MAQUETACIÓN: SALTO DE PÁGINAS POR CAPÍTULO --- */}
+                <div className="space-y-4 pt-4 border-t border-slate-800 animate-fadeIn">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-slate-200 tracking-wider flex items-center gap-1.5" style={{ fontFamily: '"Playfair Display", serif' }}>
+                      <Scissors className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Salto de Páginas por Capítulo</span>
+                    </h4>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={chapterPageBreak} 
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setChapterPageBreak(checked);
+                          localStorage.setItem("chapter_page_break", JSON.stringify(checked));
+                        }}
+                        className="sr-only peer" 
+                      />
+                      <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500 peer-checked:after:bg-slate-950 peer-checked:after:border-slate-950"></div>
+                      <span className="ml-2 text-[10px] uppercase font-bold text-slate-400 font-mono min-w-[50px]">
+                        {chapterPageBreak ? "SI" : "NO"}
+                      </span>
+                    </label>
+                  </div>
+
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Define si cada capítulo debe comenzar en una página nueva o si el texto debe fluir de manera continua a lo largo del libro. Desactivarlo ("NO") creará un flujo narrativo ininterrumpido con separadores estéticos de capítulos.
+                  </p>
                 </div>
 
                 {/* --- SECCIÓN TRADICIONAL DE TABLA DE CONTENIDOS AUTOMÁTICA --- */}
@@ -10395,6 +10816,26 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                                   }}
                                 >
                                   {leftPage.paragraphs.map((p, pIdx) => {
+                                    if (p && typeof p === "string" && p.startsWith("__CHAPTER_OPENER_INLINE__:")) {
+                                      const parts = p.split(":");
+                                      const num = parts[1];
+                                      const title = parts[2] || "";
+                                      return (
+                                        <div key={pIdx} className="my-6 text-center space-y-1.5 py-4 select-none">
+                                          <div className="flex items-center justify-center gap-2">
+                                            <div className="h-[1px] w-6 bg-amber-500/30"></div>
+                                            <span className="text-[10px] tracking-widest uppercase font-semibold text-amber-805/85" style={{ fontFamily: `"${styleSettings.fontTitle}", serif` }}>
+                                              Capítulo {num}
+                                            </span>
+                                            <div className="h-[1px] w-6 bg-amber-500/30"></div>
+                                          </div>
+                                          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight" style={{ fontFamily: `"${styleSettings.fontTitle}", serif` }}>
+                                            {title}
+                                          </h3>
+                                        </div>
+                                      );
+                                    }
+
                                     // Add drop cap layout to first paragraph if set and we are on an opener page
                                     const isFirstPara = pIdx === 0 && leftPage.isChapterOpener;
                                     const chap = chapters.find(c => c.chapterNumber === leftPage.chapterNumber);
@@ -10586,6 +11027,26 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                                   }}
                                 >
                                   {rightPage.paragraphs.map((p, pIdx) => {
+                                    if (p && typeof p === "string" && p.startsWith("__CHAPTER_OPENER_INLINE__:")) {
+                                      const parts = p.split(":");
+                                      const num = parts[1];
+                                      const title = parts[2] || "";
+                                      return (
+                                        <div key={pIdx} className="my-6 text-center space-y-1.5 py-4 select-none">
+                                          <div className="flex items-center justify-center gap-2">
+                                            <div className="h-[1px] w-6 bg-amber-500/30"></div>
+                                            <span className="text-[10px] tracking-widest uppercase font-semibold text-amber-805/85" style={{ fontFamily: `"${styleSettings.fontTitle}", serif` }}>
+                                              Capítulo {num}
+                                            </span>
+                                            <div className="h-[1px] w-6 bg-amber-500/30"></div>
+                                          </div>
+                                          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight" style={{ fontFamily: `"${styleSettings.fontTitle}", serif` }}>
+                                            {title}
+                                          </h3>
+                                        </div>
+                                      );
+                                    }
+
                                     const isFirstPara = pIdx === 0 && rightPage.isChapterOpener;
                                     const chap = chapters.find(c => c.chapterNumber === rightPage.chapterNumber);
                                     const originalIndex = chap ? chap.paragraphs.indexOf(p) : -1;
@@ -10764,6 +11225,26 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                                 }}
                               >
                                 {p.paragraphs.map((para, ind) => {
+                                  if (para && typeof para === "string" && para.startsWith("__CHAPTER_OPENER_INLINE__:")) {
+                                    const parts = para.split(":");
+                                    const num = parts[1];
+                                    const title = parts[2] || "";
+                                    return (
+                                      <div key={ind} className="my-6 text-center space-y-1.5 py-4 select-none">
+                                        <div className="flex items-center justify-center gap-2">
+                                          <div className="h-[1px] w-6 bg-amber-500/30"></div>
+                                          <span className="text-[10px] tracking-widest uppercase font-semibold text-amber-805/85" style={{ fontFamily: `"${styleSettings.fontTitle}", serif` }}>
+                                            Capítulo {num}
+                                          </span>
+                                          <div className="h-[1px] w-6 bg-amber-500/30"></div>
+                                        </div>
+                                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 tracking-tight" style={{ fontFamily: `"${styleSettings.fontTitle}", serif` }}>
+                                          {title}
+                                        </h3>
+                                      </div>
+                                    );
+                                  }
+
                                   const isFirstPara = ind === 0 && p.isChapterOpener;
                                   const chap = chapters.find(c => c.chapterNumber === p.chapterNumber);
                                   const originalIndex = chap ? chap.paragraphs.indexOf(para) : -1;
