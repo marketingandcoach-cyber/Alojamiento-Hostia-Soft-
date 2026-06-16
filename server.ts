@@ -1535,6 +1535,38 @@ Por favor, genera para cada uno de estos destinos un copy de conversión único 
   }
 });
 
+// 4.10. CLOUD SYNC ENDPOINTS: Allows instant synchronization of manuscript designs between mobile and desktop devices
+const SYNC_FILE_PATH = path.join(process.cwd(), "cloud_sync_data.json");
+
+app.post("/api/sync/save", (req, res) => {
+  try {
+    const payload = req.body;
+    fs.writeFileSync(SYNC_FILE_PATH, JSON.stringify({
+      payload,
+      updatedAt: new Date().toISOString()
+    }, null, 2), "utf-8");
+    res.json({ success: true, message: "Obra guardada en la nube con éxito." });
+  } catch (error: any) {
+    console.error("Error keeping cloud sync state:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get("/api/sync/load", (req, res) => {
+  try {
+    if (fs.existsSync(SYNC_FILE_PATH)) {
+      const content = fs.readFileSync(SYNC_FILE_PATH, "utf-8");
+      const parsed = JSON.parse(content);
+      res.json(parsed);
+    } else {
+      res.json({ empty: true, message: "No hay datos sincronizados en la nube." });
+    }
+  } catch (error: any) {
+    console.error("Error reading cloud sync state:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Vite & Static file handling
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {

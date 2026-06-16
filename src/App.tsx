@@ -59,6 +59,9 @@ import {
   Heart,
   Award,
   DollarSign,
+  Cloud,
+  CloudDownload,
+  CloudUpload,
   X
 } from "lucide-react";
 import { BookStyleSettings, Chapter, BookMetadata, SimulatedPage, ARCHETYPES, Illustration } from "./types";
@@ -1032,6 +1035,157 @@ export default function App() {
   const [manualIllAlign, setManualIllAlign] = useState<"center" | "left" | "right" | "full">("center");
   const [manualIllWidth, setManualIllWidth] = useState<number>(100);
 
+  // --- CLOUD SYNC STATE & LOGIC ---
+  const [isCloudSyncModalOpen, setIsCloudSyncModalOpen] = useState<boolean>(false);
+  const [isSyncingCloud, setIsSyncingCloud] = useState<boolean>(false);
+  const [cloudSaveExists, setCloudSaveExists] = useState<boolean>(false);
+  const [cloudSaveDate, setCloudSaveDate] = useState<string | null>(null);
+  const [cloudSaveTitle, setCloudSaveTitle] = useState<string | null>(null);
+  const [cloudSaveAuthor, setCloudSaveAuthor] = useState<string | null>(null);
+  const [showSyncNotification, setShowSyncNotification] = useState<boolean>(false);
+
+  const applyStateObject = (payload: any) => {
+    if (!payload) return;
+    if (payload.metadata) setMetadata(payload.metadata);
+    if (payload.styleSettings) setStyleSettings(payload.styleSettings);
+    if (payload.chapters) setChapters(payload.chapters);
+    if (payload.kdpTrimSize) setKdpTrimSize(payload.kdpTrimSize);
+    if (payload.chapterPageBreak !== undefined) setChapterPageBreak(payload.chapterPageBreak);
+    if (payload.customPublishers) setCustomPublishers(payload.customPublishers);
+    if (payload.publisherStatuses) setPublisherStatuses(payload.publisherStatuses);
+    if (payload.publisherNotes) setPublisherNotes(payload.publisherNotes);
+    if (payload.generatedPitches) setGeneratedPitches(payload.generatedPitches);
+    if (payload.synopsisText) setSynopsisText(payload.synopsisText);
+    if (payload.isMaverickMember !== undefined) setIsMaverickMember(payload.isMaverickMember);
+    if (payload.coverArtUrl) setCoverArtUrl(payload.coverArtUrl);
+    if (payload.coverTitleStyle) setCoverTitleStyle(payload.coverTitleStyle);
+    if (payload.coverPrimaryColor) setCoverPrimaryColor(payload.coverPrimaryColor);
+    if (payload.coverAccentColor) setCoverAccentColor(payload.coverAccentColor);
+    if (payload.spinePaperWeight) setSpinePaperWeight(payload.spinePaperWeight);
+    if (payload.coverHardcover !== undefined) setCoverHardcover(payload.coverHardcover);
+    if (payload.backCoverSynopsis) setBackCoverSynopsis(payload.backCoverSynopsis);
+    if (payload.backCoverAuthorBio) setBackCoverAuthorBio(payload.backCoverAuthorBio);
+    if (payload.customCoverLogo) setCustomCoverLogo(payload.customCoverLogo);
+    if (payload.includeTableOfContents !== undefined) setIncludeTableOfContents(payload.includeTableOfContents);
+    if (payload.tocTitle) setTocTitle(payload.tocTitle);
+    if (payload.tocStyle) setTocStyle(payload.tocStyle);
+
+    // Persist to local storage to make sure any reload keeps it
+    if (payload.metadata) localStorage.setItem("editorial_meta", JSON.stringify(payload.metadata));
+    if (payload.styleSettings) localStorage.setItem("editorial_style", JSON.stringify(payload.styleSettings));
+    if (payload.chapters) localStorage.setItem("editorial_chapters", JSON.stringify(payload.chapters));
+    if (payload.kdpTrimSize) localStorage.setItem("editorial_trim_size", payload.kdpTrimSize);
+    if (payload.chapterPageBreak !== undefined) localStorage.setItem("chapter_page_break", JSON.stringify(payload.chapterPageBreak));
+    if (payload.customPublishers) localStorage.setItem("outreach_custom_publishers", JSON.stringify(payload.customPublishers));
+    if (payload.publisherStatuses) localStorage.setItem("outreach_statuses", JSON.stringify(payload.publisherStatuses));
+    if (payload.publisherNotes) localStorage.setItem("outreach_notes", JSON.stringify(payload.publisherNotes));
+    if (payload.generatedPitches) localStorage.setItem("outreach_pitches", JSON.stringify(payload.generatedPitches));
+    if (payload.synopsisText) localStorage.setItem("outreach_synopsis", payload.synopsisText);
+    if (payload.isMaverickMember !== undefined) localStorage.setItem("is_maverick_member", payload.isMaverickMember ? "true" : "false");
+  };
+
+  const fetchCloudSyncInfo = async (showBannerNotification = false) => {
+    try {
+      const res = await fetch("/api/sync/load");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && !data.empty && data.payload) {
+        setCloudSaveExists(true);
+        setCloudSaveDate(data.updatedAt);
+        if (data.payload.metadata) {
+          setCloudSaveTitle(data.payload.metadata.title || "Sin título");
+          setCloudSaveAuthor(data.payload.metadata.author || "Autor anónimo");
+        }
+        
+        // Decide if we should notify
+        if (showBannerNotification) {
+          const storedMeta = localStorage.getItem("editorial_meta");
+          if (!storedMeta) {
+            // Empty local state: load cloud data automatically so they have the project on display right away
+            applyStateObject(data.payload);
+          } else {
+            // There is local state, check if timestamps differ
+            setShowSyncNotification(true);
+          }
+        }
+      } else {
+        setCloudSaveExists(false);
+      }
+    } catch (e) {
+      console.error("Error fetching cloud sync data:", e);
+    }
+  };
+
+  const saveToCloud = async () => {
+    setIsSyncingCloud(true);
+    const syncPayload = {
+      metadata,
+      styleSettings,
+      chapters,
+      kdpTrimSize,
+      chapterPageBreak,
+      customPublishers,
+      publisherStatuses,
+      publisherNotes,
+      generatedPitches,
+      synopsisText,
+      isMaverickMember,
+      coverArtUrl,
+      coverTitleStyle,
+      coverPrimaryColor,
+      coverAccentColor,
+      spinePaperWeight,
+      coverHardcover,
+      backCoverSynopsis,
+      backCoverAuthorBio,
+      customCoverLogo,
+      includeTableOfContents,
+      tocTitle,
+      tocStyle
+    };
+
+    try {
+      const res = await fetch("/api/sync/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(syncPayload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCloudSaveExists(true);
+        setCloudSaveDate(new Date().toISOString());
+        setCloudSaveTitle(metadata.title || "Sin título");
+        setCloudSaveAuthor(metadata.author || "Autor anónimo");
+        alert("¡Estado del proyecto guardado y sincronizado con éxito en la nube! Ahora puedes abrir la app en cualquier otro dispositivo móvil u ordenador y cargar esta misma versión anterior al instante.");
+      } else {
+        alert("Fallo al guardar en la nube: " + data.error);
+      }
+    } catch (e: any) {
+      alert("Error al conectar con el servidor de la nube: " + e.message);
+    } finally {
+      setIsSyncingCloud(false);
+    }
+  };
+
+  const loadFromCloud = async () => {
+    setIsSyncingCloud(true);
+    try {
+      const res = await fetch("/api/sync/load");
+      const data = await res.json();
+      if (data && !data.empty && data.payload) {
+        applyStateObject(data.payload);
+        setShowSyncNotification(false);
+        alert("¡Excelente! El manuscrito, los diseños de portada y toda la maquetación se han restaurado con éxito desde la sincronización en la nube.");
+      } else {
+        alert("No se encontró ninguna copia registrada en el servidor de la nube para restaurar.");
+      }
+    } catch (e: any) {
+      alert("Error al recuperar los datos desde el servidor en la nube: " + e.message);
+    } finally {
+      setIsSyncingCloud(false);
+    }
+  };
+
   // --- PERSISTENCE ---
   useEffect(() => {
     // Load from local storage if exists
@@ -1103,6 +1257,9 @@ export default function App() {
     if (storedSynopsis) {
       setSynopsisText(storedSynopsis);
     }
+    
+    // Check for multi-device cloud saves on startup!
+    fetchCloudSyncInfo(true);
   }, []);
 
   const saveToLocalStorage = (
@@ -4948,6 +5105,40 @@ ${generatedScreenplayText}
       
       {/* Auto-injected print dynamic styles matching exact KDP measurements requested */}
       <style dangerouslySetInnerHTML={{ __html: getDynamicPrintStyle() }} />
+
+      {/* Cloud Synchronizer banner notice if updates detected */}
+      {showSyncNotification && (
+        <div className="no-print bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border-b border-indigo-500/30 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs z-50 animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center justify-center p-1 bg-indigo-500/20 text-indigo-400 rounded-lg shrink-0">
+              <Cloud className="w-4 h-4 animate-bounce" />
+            </span>
+            <div className="leading-snug">
+              <span className="font-bold text-indigo-300">¡Sincronización en la Nube disponible!</span>
+              <span className="text-slate-300 ml-1.5">
+                Se detectó un cambio guardado desde otro dispositivo (ej. tu móvil):
+                <strong className="text-white ml-1">"{cloudSaveTitle || "Sin título"}"</strong> por <strong className="text-slate-200">{cloudSaveAuthor || "Anónimo"}</strong>.
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadFromCloud}
+              className="bg-indigo-650 hover:bg-indigo-600 text-white font-bold py-1 px-3 rounded shadow transition-all cursor-pointer flex items-center gap-1 shrink-0"
+              title="Cargar actualizaciones recientes de sincronización en este navegador"
+            >
+              <CloudDownload className="w-3.5 h-3.5" />
+              <span>Cargar de la Nube</span>
+            </button>
+            <button
+              onClick={() => setShowSyncNotification(false)}
+              className="text-slate-400 hover:text-slate-200 font-bold px-2 py-1 transition-all cursor-pointer shrink-0"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* 1. MAIN GLOBAL HEADER (Invisible during print) */}
       <header id="app-header" className="no-print bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 shadow-md">
@@ -5035,10 +5226,26 @@ ${generatedScreenplayText}
           </div>
           <button
             onClick={() => saveToLocalStorage()}
-            className="ml-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-700 text-slate-200 px-3 py-2 rounded font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="ml-2 bg-slate-800 hover:bg-slate-705 active:bg-slate-700 text-slate-200 px-3 py-2 rounded font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
             title="Guardar estado del proyecto de forma local"
           >
             {savedSuccess ? "Guardado ✓" : "Guardar Proyecto"}
+          </button>
+          <button
+            onClick={() => {
+              fetchCloudSyncInfo();
+              setIsCloudSyncModalOpen(true);
+            }}
+            className="bg-indigo-950/50 hover:bg-indigo-900 border border-indigo-500/40 hover:border-indigo-400 text-indigo-200 px-3 py-2 rounded font-medium flex items-center gap-1.5 transition-all cursor-pointer relative shadow-sm"
+            title="Sincronizar proyecto con la nube para transferir cambios entre móvil y ordenador"
+          >
+            <Cloud className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            <span className="whitespace-nowrap">Sincronizar Nube</span>
+            {cloudSaveExists ? (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" title="Copia de seguridad en la nube existente"></span>
+            ) : (
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-650 inline-block"></span>
+            )}
           </button>
           <button
             onClick={handleResetProject}
@@ -13556,6 +13763,92 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
               >
                 <X className="w-4 h-4" />
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL PARA SINCRONIZACIÓN EN LA NUBE MULTIDISPOSITIVO */}
+        {isCloudSyncModalOpen && (
+          <div id="cloud-sync-modal-overlay" className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full relative shadow-2xl space-y-5">
+              {/* Modal Closer */}
+              <button
+                type="button"
+                onClick={() => setIsCloudSyncModalOpen(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer bg-slate-950 p-1.5 rounded-full border border-slate-800 hover:border-slate-700 transition flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Modal Heading */}
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 bg-indigo-500/15 text-indigo-400 rounded-xl">
+                  <Cloud className="w-6 h-6 animate-pulse" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider">Sincronización en la Nube</h3>
+                  <p className="text-[9px] text-indigo-455 font-bold uppercase tracking-widest leading-none mt-0.5">Móvil & Escritorio</p>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-xs leading-relaxed text-slate-300">
+                <p>
+                  Esta funcionalidad te permite <strong>transferir y sincronizar</strong> tu libro activo, portadas generadas, estilos y capítulos directamente entre tu teléfono móvil y ordenador de manera instantánea.
+                </p>
+
+                {/* Status Section */}
+                <div className="bg-slate-950 border border-slate-850 p-3.5 rounded-xl space-y-2">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block font-mono">Estado del Servidor de Sincronización:</span>
+                  
+                  {cloudSaveExists ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-emerald-400 font-semibold text-[11px]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>Se encontró una copia activa de seguridad en el servidor</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 space-y-0.5 mt-1 border-t border-slate-900 pt-1 leading-normal">
+                        <p><strong>Libro:</strong> "{cloudSaveTitle}"</p>
+                        <p><strong>Autor:</strong> {cloudSaveAuthor}</p>
+                        <p><strong>Guardado hace:</strong> {cloudSaveDate ? new Date(cloudSaveDate).toLocaleString() : "Cargando..."}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-amber-500 font-semibold text-[11px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      <span>No se ha guardado ninguna copia en la nube todavía</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Sync Action Buttons */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={saveToCloud}
+                  disabled={isSyncingCloud}
+                  className="bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-bold py-2.5 px-4 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all text-xs cursor-pointer active:scale-95 disabled:opacity-50"
+                >
+                  <CloudUpload className="w-5 h-5 text-indigo-400" />
+                  <span>1. Subir a la nube</span>
+                  <span className="text-[8px] font-normal text-slate-500 leading-none">Guardar pantalla actual</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={loadFromCloud}
+                  disabled={isSyncingCloud || !cloudSaveExists}
+                  className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-850 text-white font-bold py-2.5 px-4 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all text-xs cursor-pointer active:scale-95 disabled:opacity-30 disabled:text-slate-500"
+                >
+                  <CloudDownload className="w-5 h-5 text-amber-400" />
+                  <span>2. Bajar de la nube</span>
+                  <span className="text-[8px] font-normal text-slate-250 leading-none">Cargar en esta pantalla</span>
+                </button>
+              </div>
+
+              <div className="text-[8.5px] text-slate-500 text-center italic leading-snug">
+                Al hacer clic en "Bajar de la nube", se restaurarán todas las actualizaciones realizadas recientemente desde tu teléfono móvil.
+              </div>
             </div>
           </div>
         )}
