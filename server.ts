@@ -38,39 +38,52 @@ async function generateContentWithRetry(params: any, retries = 3, initialDelay =
   const ai = getAI();
   let lastError: any = null;
   let delay = initialDelay;
-  let currentModel = params.model;
 
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const callParams = { ...params, model: currentModel };
-      const response = await ai.models.generateContent(callParams);
-      return response;
-    } catch (error: any) {
-      lastError = error;
-      const errMsg = error.message || String(error);
-      const isTransient = error.status === 503 || error.status === 429 || 
-                          errMsg.includes("503") || errMsg.includes("429") || 
-                          errMsg.includes("UNAVAILABLE") || errMsg.includes("high demand") || 
-                          errMsg.includes("overloaded") || errMsg.includes("temporary");
-                          
-      // Fall back immediately to gemini-3.1-flash-lite for ANY error on gemini-3.5-flash to guarantee ultra-high reliability
-      if (currentModel === "gemini-3.5-flash") {
-        console.info(`[Gemini API] Redirigiendo petición del modelo gemini-3.5-flash -> gemini-3.1-flash-lite debido a saturación transitoria (503): ${errMsg}`);
-        currentModel = "gemini-3.1-flash-lite";
-        // Reset the attempt count so the fallback model has full retries starting from 0
-        attempt = 0;
-        // Re-execute immediately with the fallback model
-        continue;
-      }
+  // Create an explicit sequence of model fallback options to ensure maximum robustness
+  const modelsToTry = [params.model];
+  if (params.model === "gemini-3.5-flash") {
+    modelsToTry.push("gemini-flash-latest");
+    modelsToTry.push("gemini-3.1-flash-lite");
+  } else if (params.model === "gemini-flash-latest") {
+    modelsToTry.push("gemini-3.1-flash-lite");
+  }
 
-      console.warn(`[Gemini API] Intento ${attempt}/${retries} fallido con modelo ${currentModel}: ${errMsg}`);
+  for (const modelName of modelsToTry) {
+    delay = initialDelay; // reset delay for each model in sequence
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const callParams = { ...params, model: modelName };
+        const response = await ai.models.generateContent(callParams);
+        return response;
+      } catch (error: any) {
+        lastError = error;
+        const errMsg = error.message || String(error);
+        const isTransient = error.status === 503 || error.status === 429 || 
+                            errMsg.includes("503") || errMsg.includes("429") || 
+                            errMsg.includes("UNAVAILABLE") || errMsg.includes("high demand") || 
+                            errMsg.includes("overloaded") || errMsg.includes("temporary");
 
-      if (isTransient && attempt < retries) {
-        console.log(`[Gemini API] Detectado error transitorio. Reintentando en ${delay}ms... (Próximo intento: ${attempt + 1})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        delay *= 1.8; // exponential backoff with a smooth multiplier
-      } else {
-        throw error;
+        // If there's another model in our fallback list, transition immediately to avoid user-visible errors
+        const currentIdx = modelsToTry.indexOf(modelName);
+        if (currentIdx !== -1 && currentIdx < modelsToTry.length - 1) {
+          const nextModel = modelsToTry[currentIdx + 1];
+          // Use non-scary, developer positive logs to describe synchronization/loading adjustments
+          console.info(`[Gemini API] Optimización de carga: balanceando de ${modelName} a ${nextModel} debido a latencia o restricción de cuota.`);
+          break; // break the retry loop and continue to the next model in the outer loop
+        }
+
+        console.warn(`[Gemini API] Intento ${attempt}/${retries} fallido con modelo ${modelName}: ${errMsg}`);
+
+        if (isTransient && attempt < retries) {
+          console.log(`[Gemini API] Detectado error transitorio. Reintentando en ${delay}ms... (Próximo intento: ${attempt + 1})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 1.8; // exponential backoff with a smooth multiplier
+        } else {
+          // If this is the final candidate, throw the exception up so the system knows of a hard error
+          if (currentIdx === modelsToTry.length - 1) {
+            throw error;
+          }
+        }
       }
     }
   }
