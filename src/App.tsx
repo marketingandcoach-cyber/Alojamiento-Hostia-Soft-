@@ -318,7 +318,7 @@ export default function App() {
     publisher: "Editorial El Clásico",
     year: "1605",
     isbn: "",
-    safeCreativeId: "2606015848217-2CJB4R",
+    safeCreativeId: "",
     copyrightType: "todos-derechos",
     licenseDetails: "Todos los derechos reservados. Ninguna parte de esta publicación puede ser reproducida o transmitida por ningún medio sin permiso previo.",
     publisherLogo: "",
@@ -972,6 +972,14 @@ export default function App() {
   const [coverPrimaryColor, setCoverPrimaryColor] = useState<string>("#0b0f19"); // Dark cosmic blue
   const [coverAccentColor, setCoverAccentColor] = useState<string>("#f59e0b"); // Amber
   const [isGeneratingCover, setIsGeneratingCover] = useState<boolean>(false);
+  const [coverOptions, setCoverOptions] = useState<{
+    id: number;
+    url: string;
+    primaryColor: string;
+    accentColor: string;
+    label: string;
+  }[]>([]);
+  const [isGeneratingSynopsis, setIsGeneratingSynopsis] = useState<boolean>(false);
   const [spinePaperWeight, setSpinePaperWeight] = useState<"cream-thick" | "white-standard" | "thin-digital">("white-standard");
   const [coverHardcover, setCoverHardcover] = useState<boolean>(false);
   const [backCoverSynopsis, setBackCoverSynopsis] = useState<string>("Una profunda exploración sobre los límites del arte digital, el diseño tipográfico y el alma del escritor en un entorno hipertecnológico. ¿Cómo sobrevive la belleza rítmica de la palabra escrita cuando todo a nuestro alrededor se rige por algoritmos?");
@@ -4712,37 +4720,164 @@ ${generatedScreenplayText}
     setIsGeneratingCover(true);
     setTimeout(() => {
       const promptLower = coverPrompt.toLowerCase();
-      let selectedImg = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=1200&auto=format&fit=crop";
-      let pCol = "#0f172a"; 
-      let aCol = "#f59e0b"; 
+      let options = [];
 
       if (promptLower.includes("mar") || promptLower.includes("agua") || promptLower.includes("oceano") || promptLower.includes("océano") || promptLower.includes("azul") || promptLower.includes("marino")) {
-        selectedImg = "https://images.unsplash.com/photo-1505118380757-91f5f5632de0?q=80&w=1200&auto=format&fit=crop";
-        pCol = "#031c3c";
-        aCol = "#7dd3fc";
+        options = [
+          {
+            id: 1,
+            label: "Marina Clásica",
+            url: "https://images.unsplash.com/photo-1505118380757-91f5f5632de0?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#031c3c",
+            accentColor: "#7dd3fc"
+          },
+          {
+            id: 2,
+            label: "Mareas Profundas",
+            url: "https://images.unsplash.com/photo-1439405326854-014607f694d7?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#011627",
+            accentColor: "#38bdf8"
+          },
+          {
+            id: 3,
+            label: "Faro de Ensueño",
+            url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#1e293b",
+            accentColor: "#4cc9f0"
+          }
+        ];
       } else if (promptLower.includes("bosque") || promptLower.includes("naturaleza") || promptLower.includes("arbol") || promptLower.includes("árbol") || promptLower.includes("verde") || promptLower.includes("selva")) {
-        selectedImg = "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1200&auto=format&fit=crop";
-        pCol = "#022c22";
-        aCol = "#34d399";
+        options = [
+          {
+            id: 1,
+            label: "Dosel Místico",
+            url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#022c22",
+            accentColor: "#34d399"
+          },
+          {
+            id: 2,
+            label: "Bosque Profundo",
+            url: "https://images.unsplash.com/photo-1473448912268-2022ce9509d8?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#0f1f15",
+            accentColor: "#a7f3d0"
+          },
+          {
+            id: 3,
+            label: "Susurro Verde",
+            url: "https://images.unsplash.com/photo-1511497584788-876760111969?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#14532d",
+            accentColor: "#fbbf24"
+          }
+        ];
       } else if (promptLower.includes("fuego") || promptLower.includes("rojo") || promptLower.includes("sol") || promptLower.includes("atardecer") || promptLower.includes("sangre") || promptLower.includes("fénix")) {
-        selectedImg = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1200&auto=format&fit=crop";
-        pCol = "#450a0a";
-        aCol = "#fb923c";
+        options = [
+          {
+            id: 1,
+            label: "Llamas Sagradas",
+            url: "https://images.unsplash.com/photo-1508525428034-b723cf961d3e?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#450a0a",
+            accentColor: "#fb923c"
+          },
+          {
+            id: 2,
+            label: "Atardecer del Alma",
+            url: "https://images.unsplash.com/photo-1472214222541-d510753a49fa?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#2d0b13",
+            accentColor: "#f43f5e"
+          },
+          {
+            id: 3,
+            label: "Chispas de Fénix",
+            url: "https://images.unsplash.com/photo-1496317556649-f930d733eea3?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#320c02",
+            accentColor: "#fbbf24"
+          }
+        ];
       } else if (promptLower.includes("estrella") || promptLower.includes("universo") || promptLower.includes("cosmos") || promptLower.includes("galaxia") || promptLower.includes("astros") || promptLower.includes("oro") || promptLower.includes("cósmico") || promptLower.includes("dorado")) {
-        selectedImg = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200&auto=format&fit=crop";
-        pCol = "#050b14";
-        aCol = "#fbbf24";
+        options = [
+          {
+            id: 1,
+            label: "Polvo Cósmico",
+            url: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#050b14",
+            accentColor: "#fbbf24"
+          },
+          {
+            id: 2,
+            label: "Abismo del Tiempo",
+            url: "https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#03001e",
+            accentColor: "#d946ef"
+          },
+          {
+            id: 3,
+            label: "Nebulosa Íntima",
+            url: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#170139",
+            accentColor: "#a855f7"
+          }
+        ];
       } else {
-        selectedImg = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1200&auto=format&fit=crop";
-        pCol = "#0f172a";
-        aCol = "#fb7185";
+        options = [
+          {
+            id: 1,
+            label: "Elegancia Papiro",
+            url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#0f172a",
+            accentColor: "#fb7185"
+          },
+          {
+            id: 2,
+            label: "Madera de Biblioteca",
+            url: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#1e1b18",
+            accentColor: "#d97706"
+          },
+          {
+            id: 3,
+            label: "Minimalismo Lírico",
+            url: "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?q=80&w=1200&auto=format&fit=crop",
+            primaryColor: "#090d16",
+            accentColor: "#6366f1"
+          }
+        ];
       }
 
-      setCoverArtUrl(selectedImg);
-      setCoverPrimaryColor(pCol);
-      setCoverAccentColor(aCol);
+      setCoverOptions(options);
+      // Auto-select first option
+      setCoverArtUrl(options[0].url);
+      setCoverPrimaryColor(options[0].primaryColor);
+      setCoverAccentColor(options[0].accentColor);
       setIsGeneratingCover(false);
     }, 2200);
+  };
+
+  const handleGenerateSynopsisWithAi = async () => {
+    setIsGeneratingSynopsis(true);
+    try {
+      const res = await fetch("/api/generate-synopsis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: metadata.title,
+          author: metadata.author,
+          genre: metadata.genre,
+          chapters: chapters.map(c => ({ chapterNumber: c.chapterNumber, title: c.title }))
+        })
+      });
+      if (!res.ok) throw new Error("Fallo al contactar el redactor");
+      const data = await res.json();
+      if (data.synopsis) {
+        setBackCoverSynopsis(data.synopsis);
+      }
+    } catch (err) {
+      console.error(err);
+      // Fallback local semantic simulation
+      setBackCoverSynopsis(`En las páginas de esta apasionante obra, "${metadata.title || "nuestra nueva obra"}" de ${metadata.author || "gran autor"}, nos sumergimos en un inolvidable viaje literario cargado de intriga y ritmo extraordinario. Un recorrido de diagramación sublime diseñado para capturar la esencia de la literatura contemporánea.`);
+    } finally {
+      setIsGeneratingSynopsis(false);
+    }
   };
 
   const handleTransferToSafeCreative = () => {
@@ -5805,10 +5940,15 @@ ${generatedScreenplayText}
                             isSelected ? "bg-amber-500 text-slate-950 border-amber-400" : "bg-slate-800 text-slate-400 border-slate-700"
                           }`}>
                             {key === "classic" && <BookOpen className="w-4 h-4" />}
-                            {key === "modernist" && <Feather className="w-4 h-4" />}
                             {key === "fantasy" && <Sparkles className="w-4 h-4" />}
-                            {key === "minimalist" && <Layout className="w-4 h-4" />}
                             {key === "thriller" && <Flame className="w-4 h-4" />}
+                            {key === "selfhelp" && <Zap className="w-4 h-4" />}
+                            {key === "biography" && <Feather className="w-4 h-4" />}
+                            {key === "finance" && <Award className="w-4 h-4" />}
+                            {key === "zen" && <Heart className="w-4 h-4" />}
+                            {key === "romance" && <Crown className="w-4 h-4" />}
+                            {key === "sciencetech" && <Sliders className="w-4 h-4" />}
+                            {key === "experimental" && <Layout className="w-4 h-4" />}
                           </div>
                           
                           <div className="flex-1 space-y-1">
@@ -11591,6 +11731,52 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                             <Sparkles className={`w-3.5 h-3.5 ${isGeneratingCover ? "animate-spin" : ""}`} />
                             <span>{isGeneratingCover ? "Creando Obras de Arte..." : "Generar Portadas Sugeridas con IA"}</span>
                           </button>
+
+                          {/* Cover Options Display Panel */}
+                          {coverOptions.length > 0 && (
+                            <div className="pt-3 border-t border-slate-800/50 space-y-2">
+                              <span className="text-[9px] font-bold text-indigo-350 uppercase tracking-wider block">Opciones Propuestas con IA:</span>
+                              <div className="grid grid-cols-3 gap-1.5">
+                                {coverOptions.map((opt) => {
+                                  const isSelected = coverArtUrl === opt.url;
+                                  return (
+                                    <button
+                                      key={opt.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setCoverArtUrl(opt.url);
+                                        setCoverPrimaryColor(opt.primaryColor);
+                                        setCoverAccentColor(opt.accentColor);
+                                      }}
+                                      className={`p-1 border text-left transition-all relative overflow-hidden group rounded-lg h-[64px] flex flex-col justify-between cursor-pointer ${
+                                        isSelected 
+                                          ? "border-amber-500 bg-slate-900 ring-1 ring-amber-500/30" 
+                                          : "border-slate-850 bg-slate-900/40 hover:border-slate-700"
+                                      }`}
+                                    >
+                                      {/* Mini Thumbnail Background */}
+                                      <div className="absolute inset-0 opacity-20 group-hover:opacity-35 transition-opacity">
+                                        <img src={opt.url} alt={opt.label} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                                      </div>
+                                      
+                                      <span className="text-[7.5px] font-bold uppercase tracking-wider text-amber-400 z-10 relative">Opción {opt.id}</span>
+                                      
+                                      <div className="z-10 relative leading-tight">
+                                        <span className="text-[8px] font-semibold text-slate-100 block truncate leading-[1.1]">{opt.label}</span>
+                                        <div className="flex gap-0.5 mt-0.5">
+                                          <span className="w-1.5 h-1.5 rounded-full border border-slate-705 block" style={{ backgroundColor: opt.primaryColor }} />
+                                          <span className="w-1.5 h-1.5 rounded-full border border-slate-705 block" style={{ backgroundColor: opt.accentColor }} />
+                                        </div>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <p className="text-[8px] text-slate-500 italic leading-snug">
+                                Haz clic en una opción para aplicarla instantáneamente al pliego.
+                              </p>
+                            </div>
+                          )}
                         </div>
 
                         {/* Paper & Spine Calculator Settings */}
@@ -11698,7 +11884,40 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                               type="text"
                               value={customCoverLogo}
                               onChange={(e) => setCustomCoverLogo(e.target.value)}
-                              className="w-full text-xs bg-slate-900 text-slate-200 p-1.5 rounded-lg border border-slate-850"
+                              className="w-full text-xs bg-slate-900 text-slate-200 p-1.5 rounded-lg border border-slate-850 focus:outline-none focus:border-indigo-500"
+                            />
+                          </div>
+
+                          <div className="space-y-1 leading-normal">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] text-slate-400 block">Sinopsis de Contraportada:</span>
+                              <button
+                                type="button"
+                                onClick={handleGenerateSynopsisWithAi}
+                                disabled={isGeneratingSynopsis}
+                                className="text-[9.5px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 cursor-pointer disabled:opacity-40"
+                              >
+                                <Sparkles className={`w-3 h-3 ${isGeneratingSynopsis ? "animate-spin" : ""}`} />
+                                <span>{isGeneratingSynopsis ? "Redactando..." : "Sugerir con IA"}</span>
+                              </button>
+                            </div>
+                            <textarea
+                              value={backCoverSynopsis}
+                              onChange={(e) => setBackCoverSynopsis(e.target.value)}
+                              rows={3}
+                              placeholder="Sinopsis oficial que irá impresa en la contraportada..."
+                              className="w-full text-[11px] bg-slate-900 text-slate-200 p-2 rounded-lg border border-slate-800 focus:border-indigo-500 focus:outline-none resize-none leading-relaxed"
+                            />
+                          </div>
+
+                          <div className="space-y-1 leading-normal">
+                            <span className="text-[9px] text-slate-400 block">Sobre el Autor (Contraportada):</span>
+                            <textarea
+                              value={backCoverAuthorBio}
+                              onChange={(e) => setBackCoverAuthorBio(e.target.value)}
+                              rows={2}
+                              placeholder="Biografía breve del autor..."
+                              className="w-full text-[11px] bg-slate-900 text-slate-200 p-2 rounded-lg border border-slate-800 focus:border-indigo-500 focus:outline-none resize-none leading-relaxed"
                             />
                           </div>
                         </div>

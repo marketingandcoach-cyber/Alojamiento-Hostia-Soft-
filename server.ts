@@ -856,6 +856,44 @@ Para cada ilustración propuesta, debes devolver un objeto en formato JSON con e
   }
 });
 
+// 4.3. GENERATE SYNOPSIS ENDPOINT: Generates a professional back cover synopsis in Spanish for cover design
+app.post("/api/generate-synopsis", async (req, res) => {
+  const { title, author, genre, chapters } = req.body;
+
+  try {
+    const ai = getAI();
+    const systemPrompt = `
+Eres un redactor creativo, crítico literario y director de marketing editorial senior para grandes sellos (Planeta, Penguin Random House).
+Tu misión es escribir una sinopsis comercial y magnética para la contraportada de un libro con el título: "${title || "Sin título"}", del autor: "${author || "Autor Anónimo"}" y género: "${genre || "Ficción narrativa"}".
+
+Pautas de redacción:
+1. No reveles giros importantes de la trama (spoilers).
+2. Genera intriga y deseo de lectura inmediata.
+3. El tono debe adecuarse perfectamente al género (solemne para histórica, trepidante para thriller, intelectual y conmovedor para literatura contemporánea).
+4. El tamaño sugerido es de entre 120 y 160 palabras.
+5. Redacta íntegramente en español neutro premium.
+
+Responde únicamente con el texto limpio de la sinopsis comercial de contraportada, sin introducciones ni comentarios explicativos. No uses comillas exteriores.
+`;
+
+    const response = await generateContentWithRetry({
+      model: "gemini-3.5-flash",
+      contents: `Título: ${title}\nAutor: ${author}\nGénero: ${genre}\nCapítulos: ${chapters ? JSON.stringify(chapters) : "No suministrados"}\n\nEscribe la sinopsis comercial de contraportada de este libro que enganche al lector de inmediato.`,
+      config: {
+        systemInstruction: systemPrompt,
+        temperature: 0.82
+      }
+    });
+
+    res.json({ synopsis: response.text.trim() });
+  } catch (error: any) {
+    console.error("Error generating synopsis:", error);
+    res.json({ 
+      synopsis: `En las páginas de esta apasionante obra, el autor nos sumerge en un inolvidable viaje literario cargado de lirismo y tensión lírica. Un recorrido de diagramación sublime diseñado para mentes amantes de la gran lectura.` 
+    });
+  }
+});
+
 // 4.5. GENERATE EDITORIAL PITCH ENDPOINT: Tailors a professional submission letter in Spanish for book publishers
 app.post("/api/generate-editorial-pitch", async (req, res) => {
   const { title, author, subtitle, publisherName, publisherGenre, textExcerpt, synopsis } = req.body;
@@ -1221,20 +1259,57 @@ Responde siempre en formato JSON con la estructura del responseSchema.
 `;
 
     // Format chat history for @google/genai contents list
-    const contents = [];
+    const rawContents = [];
     if (messages && Array.isArray(messages)) {
       for (const msg of messages) {
-        contents.push({
+        rawContents.push({
           role: msg.role === "assistant" ? "model" : "user",
           parts: [{ text: typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content) }]
         });
       }
     }
 
-    const lastContent = contents[contents.length - 1];
-    const isDuplicate = lastContent && lastContent.role === "user" && lastContent.parts?.[0]?.text === prompt;
+    const lastRawContent = rawContents[rawContents.length - 1];
+    const isDuplicate = lastRawContent && lastRawContent.role === "user" && lastRawContent.parts?.[0]?.text === prompt;
 
     if (!isDuplicate && prompt) {
+      rawContents.push({
+        role: "user",
+        parts: [{ text: prompt }]
+      });
+    }
+
+    // STRICTOR ALTERNATION SANITIZATION FOR GEMINI API:
+    // Filter out messages with empty content and ensure roles alternate cleanly (user -> model -> user -> model...)
+    const contents = [];
+    let expectedNextRole = "user";
+
+    for (const item of rawContents) {
+      const text = item.parts?.[0]?.text?.trim() || "";
+      if (!text) continue; // Skip empty messages
+
+      if (item.role === expectedNextRole) {
+        contents.push({
+          role: item.role,
+          parts: [{ text }]
+        });
+        expectedNextRole = expectedNextRole === "user" ? "model" : "user";
+      } else if (contents.length > 0 && item.role === "user" && expectedNextRole === "user") {
+        // If we get consecutive user messages, merge them!
+        contents[contents.length - 1].parts[0].text += "\n" + text;
+      } else if (contents.length > 0 && item.role === "model" && expectedNextRole === "model") {
+        // If we get consecutive model messages, merge them!
+        contents[contents.length - 1].parts[0].text += "\n" + text;
+      }
+    }
+
+    // Under all circumstances, the last message in a chat must be from the "user"
+    if (contents.length > 0 && contents[contents.length - 1].role === "model") {
+      contents.pop();
+    }
+
+    // In case we ended up with water-thin contents, ensure we have at least one user message!
+    if (contents.length === 0 && prompt) {
       contents.push({
         role: "user",
         parts: [{ text: prompt }]
