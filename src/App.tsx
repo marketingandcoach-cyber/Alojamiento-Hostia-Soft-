@@ -64,6 +64,7 @@ import {
   CloudUpload,
   CreditCard,
   Mail,
+  Upload,
   X
 } from "lucide-react";
 import { BookStyleSettings, Chapter, BookMetadata, SimulatedPage, ARCHETYPES, Illustration } from "./types";
@@ -3199,13 +3200,47 @@ export default function App() {
     );
   };
 
-  const getPrintDimensions = (preset: "6x9" | "A5" | "A4" | "Pocket") => {
-    switch (preset) {
-      case "6x9": return { widthMm: 152.4, heightMm: 228.6, label: "Novela Estándar (6\"x9\" - 152x228mm)" };
-      case "A5": return { widthMm: 148, heightMm: 210, label: "A5 Compacto (148x210mm)" };
-      case "A4": return { widthMm: 210, heightMm: 297, label: "A4 Técnico (210x297mm)" };
-      case "Pocket": return { widthMm: 108, heightMm: 178, label: "Bolsillo Mass-Market (108x178mm)" };
+  const getPrintDimensions = (sizeKey: string) => {
+    switch (sizeKey) {
+      case "6x9":
+      case "6in_9in":
+        return { widthMm: 152.4, heightMm: 228.6, label: "Novela Estándar (6\"x9\" - 152.4x228.6mm)" };
+      case "5.5in_8.5in":
+        return { widthMm: 139.7, heightMm: 215.9, label: "Digest Pequeño (5.5\"x8.5\" - 139.7x215.9mm)" };
+      case "5in_8in":
+      case "Pocket":
+        return { widthMm: 127.0, heightMm: 203.2, label: "Bolsillo Novela (5\"x8\" - 127x203.2mm)" };
+      case "A5":
+        return { widthMm: 148.0, heightMm: 210.0, label: "A5 Estándar (148x210mm)" };
+      case "A4":
+        return { widthMm: 210.0, heightMm: 297.0, label: "A4 Técnico (210x297mm)" };
+      case "7in_10in":
+        return { widthMm: 177.8, heightMm: 254.0, label: "Manual Técnico (7\"x10\" - 177.8x254mm)" };
+      case "8.5in_11in":
+        return { widthMm: 215.9, heightMm: 279.4, label: "Gran Formato (8.5\"x11\" - 215.9x279.4mm)" };
+      default:
+        return { widthMm: 152.4, heightMm: 228.6, label: "Novela Estándar (6\"x9\" - 152.4x228.6mm)" };
     }
+  };
+
+  const getDiagrammersInternalBarcode = () => {
+    const authorInitials = (metadata.author || "AUTOR")
+      .split(/\s+/)
+      .map((word) => word.charAt(0).toUpperCase())
+      .filter((char) => /[A-Z]/.test(char))
+      .join("") || "AU";
+    
+    const sizeCode = kdpTrimSize === "6in_9in" ? "69" : 
+                     kdpTrimSize === "5.5in_8.5in" ? "55" : 
+                     kdpTrimSize === "5in_8in" ? "58" : 
+                     kdpTrimSize === "7in_10in" ? "70" : "85";
+
+    const pageCount = pages.length > 0 ? pages.length : 120;
+    
+    const isbnBase = metadata.isbn ? metadata.isbn.replace(/[^0-9]/g, "") : "979109312";
+    const segment = isbnBase.slice(-4) || "8840";
+    
+    return `DIAG-${authorInitials}-${sizeCode}-${pageCount}-${segment}`;
   };
 
   const renderPrintPageMarkup = (p: SimulatedPage, isLeft: boolean) => {
@@ -3464,11 +3499,408 @@ export default function App() {
     );
   };
 
+  const exportPrintReadyCover = () => {
+    const { widthMm, heightMm } = getPrintDimensions(kdpTrimSize);
+    const count = pages.length > 0 ? pages.length : 120;
+    const mult = spinePaperWeight === "cream-thick" ? 0.057 : spinePaperWeight === "thin-digital" ? 0.035 : 0.050;
+    const spineMm = count * mult * (coverHardcover ? 1.15 : 1.0) + (coverHardcover ? 2.5 : 0);
+    const bleed = printBleedMm || 3.175;
+    
+    const totalWidthMm = (widthMm * 2) + spineMm + (bleed * 2);
+    const totalHeightMm = heightMm + (bleed * 2);
+    
+    const barcodeCode = getDiagrammersInternalBarcode();
+    const coverLayoutName = `${metadata.title.replace(/\s+/g, '_')}_Cubierta_Extendida_KDP.html`;
+
+    const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DIAGRAMMERS - Cubierta Extendida KDP - ${metadata.title}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #0f172a;
+      font-family: 'Inter', sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* PLIEGO EXTENDIDO COMPLETO */
+    .cover-wrap-container {
+      position: relative;
+      width: ${totalWidthMm}mm;
+      height: ${totalHeightMm}mm;
+      background-color: ${coverPrimaryColor};
+      color: #ffffff;
+      overflow: hidden;
+      margin: 30px auto;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    }
+
+    @media print {
+      body {
+        background: transparent !important;
+      }
+      .cover-wrap-container {
+        margin: 0 !important;
+        box-shadow: none !important;
+        page-break-before: always !important;
+        page-break-after: always !important;
+        page-break-inside: avoid !important;
+      }
+      @page {
+        size: ${totalWidthMm}mm ${totalHeightMm}mm;
+        margin: 0;
+      }
+    }
+
+    /* CAPAS DEL COMPILADO */
+    .bleed-area {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: ${bleed}mm solid rgba(255,255,255,0.08);
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .trim-box {
+      position: absolute;
+      top: ${bleed}mm;
+      left: ${bleed}mm;
+      width: calc(100% - ${bleed * 2}mm);
+      height: calc(100% - ${bleed * 2}mm);
+      pointer-events: none;
+      z-index: 21;
+    }
+
+    /* CONTENIDOS SOCIALES DE PANELES */
+    .panels-container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    .panel-back {
+      width: ${widthMm + bleed}mm;
+      height: 100%;
+      padding: ${bleed + 15}mm 15mm 15mm ${bleed + 15}mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-right: 0.2mm dashed rgba(255,255,255,0.15);
+      position: relative;
+      z-index: 5;
+    }
+
+    .panel-spine {
+      width: ${spineMm}mm;
+      height: 100%;
+      padding: ${bleed + 10}mm 1mm ${bleed + 10}mm 1mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      border-right: 0.2mm dashed rgba(255,255,255,0.15);
+      position: relative;
+      z-index: 6;
+      background-color: ${coverPrimaryColor};
+    }
+
+    .panel-front {
+      width: ${widthMm + bleed}mm;
+      height: 100%;
+      padding: ${bleed + 20}mm ${bleed + 20}mm ${bleed + 20}mm 20mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background-size: cover;
+      background-position: center;
+      background-image: linear-gradient(to bottom, ${coverPrimaryColor}90, ${coverPrimaryColor}ee), url("${coverArtUrl}");
+      position: relative;
+      z-index: 5;
+    }
+
+    /* ELEMENTOS TIPOGRÁFICOS */
+    .synopsis-text {
+      font-size: 10pt;
+      line-height: 1.6;
+      color: rgba(243, 244, 246, 0.85);
+      text-align: justify;
+      font-style: italic;
+    }
+
+    .author-bio {
+      font-size: 8.5pt;
+      line-height: 1.5;
+      color: rgba(209, 213, 219, 0.75);
+      margin-top: 15px;
+    }
+
+    .spine-title-vertical {
+      font-family: 'Space Grotesk', 'Inter', sans-serif;
+      font-size: 11pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: ${coverAccentColor};
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      transform: rotate(180deg);
+      white-space: nowrap;
+      margin: auto 0;
+    }
+
+    /* BARCODE STYLING */
+    .barcode-svg-box {
+      background: #ffffff;
+      padding: 8px 12px;
+      border-radius: 4px;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .barcode-lines {
+      width: 100px;
+      height: 32px;
+      display: flex;
+      align-items: stretch;
+      gap: 1.1px;
+    }
+
+    .barcode-stripe {
+      background: #000000;
+      flex: none;
+    }
+
+    .barcode-label {
+      color: #000000 !important;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.5pt;
+      font-weight: bold;
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+
+    /* FRONT COVER TYPOGRAPHY PRESETS */
+    .genre-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.35em;
+      color: ${coverAccentColor};
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .front-title-serif {
+      font-family: 'Playfair Display', serif;
+      font-size: 26pt;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      line-height: 1.25;
+      color: #ffffff;
+      text-align: center;
+    }
+
+    .front-title-sans {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28pt;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      text-transform: uppercase;
+      line-height: 1.1;
+      color: #ffffff;
+      text-align: center;
+    }
+
+    .front-subtitle {
+      font-size: 11pt;
+      font-style: italic;
+      color: rgba(229, 231, 235, 0.8);
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    .author-footer {
+      font-family: 'Playfair Display', serif;
+      font-size: 13pt;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      font-weight: 700;
+      text-align: center;
+      color: #ffffff;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      padding-top: 15px;
+    }
+
+    /* PREPRESS REGISTRATION MARKS */
+    .prepress-crop-guides {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PANEL EN PANTALLA EXPLICATIVO -->
+  <div style="background: #1e1b4b; border-bottom: 1px solid #312e81; color: #cbd5e1; padding: 12px 24px; font-size: 11px; font-family: sans-serif; display: flex; justify-content: space-between; align-items: center;" class="no-print">
+    <div>
+      <strong style="color: #f59e0b;">✦ MÓDULO PREPRESS DIAGRAMMERS ACTIVADO:</strong> Pliego unificado listo para imprenta para el tamaño de obra KDP <strong>${kdpTrimSize === "6in_9in" ? "6x9\"" : kdpTrimSize}</strong>.
+    </div>
+    <div style="display: flex; gap: 15px;">
+      <span>Lomo recalculado: <strong>${spineMm.toFixed(2)} mm</strong> (${count} pág.)</span>
+      <span>Sangre: <strong>${bleed.toFixed(3)} mm</strong></span>
+      <button onclick="window.print()" style="background: #ea580c; border: none; color: white; cursor: pointer; font-weight: bold; padding: 5px 12px; border-radius: 4px;">IMPRIMIR / GUARDAR PDF</button>
+    </div>
+  </div>
+
+  <div class="cover-wrap-container">
+    
+    <!-- ÁREA DE CORTE Y RECOTE (SANGRE) -->
+    <div class="bleed-area"></div>
+    <div class="trim-box"></div>
+
+    <!-- PANELES DE LA CUBIERTA -->
+    <div class="panels-container">
+      
+      <!-- CONTRA PORTADA (IZQUIERDA) -->
+      <div class="panel-back">
+        <div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 8pt; letter-spacing: 3px; font-weight: bold; color: ${coverAccentColor}; opacity: 0.85; margin-bottom: 25px;">
+            ✦ ${customCoverLogo || "DIAGRAMMERS PUBLISHING"}
+          </div>
+          
+          <div>
+            <h4 style="font-family: 'Space Grotesk', sans-serif; font-size: 12pt; text-transform: uppercase; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 12px; color: ${coverAccentColor};">
+              Sinopsis de la Obra
+            </h4>
+            <div class="synopsis-text">
+              "${backCoverSynopsis || "Sinopsis no configurada. Edita el texto desde el diseñador de portadas de Diagrammers."}"
+            </div>
+          </div>
+
+          <div style="margin-top: 25px;">
+            <h5 style="font-family: 'Space Grotesk', sans-serif; font-size: 10pt; text-transform: uppercase; font-weight: 700; color: ${coverAccentColor}; opacity: 0.85; margin-bottom: 8px;">
+              Sobre el Autor
+            </h5>
+            <div class="author-bio">
+              ${backCoverAuthorBio || "Biografía del autor."}
+            </div>
+          </div>
+        </div>
+
+        <!-- Barcode Block -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 7.5pt; color: rgba(255,255,255,0.45); line-height: 1.4;">
+            Sello editorial oficial<br>
+            DIAGRAMMERS ENTERPRISE
+          </div>
+
+          <!-- DIAGRAMMERS B2B INTERNAL BARCODE SYSTEM -->
+          <div class="barcode-svg-box">
+            <div class="barcode-lines">
+              ${[2,1,3,1,1,2,1,4,1,2,3,1,2,1,1,2,1,3,1,2,1,1,4,1,2].map(w => `<div class="barcode-stripe" style="width: ${w * 1}px"></div>`).join("")}
+            </div>
+            <div class="barcode-label">${barcodeCode}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOMO DE IMPRESIÓN (CENTRO) -->
+      <div class="panel-spine">
+        <div style="font-size: 8pt; font-family: 'JetBrains Mono', monospace; color: ${coverAccentColor}; font-weight: bold;">♦</div>
+        
+        <div class="spine-title-vertical">
+          <span>${metadata.title || "TÍTULO DEL LIBRO"}</span>
+          <span style="color: rgba(255,255,255,0.5); font-weight: normal; margin: 0 10px;">•</span>
+          <span style="color: #ffffff;">${metadata.author || "AUTOR"}</span>
+        </div>
+
+        <div style="font-size: 8pt; font-family: 'JetBrains Mono', monospace; color: ${coverAccentColor}; font-weight: bold; border: 1px solid ${coverAccentColor}; padding: 1px 4px; border-radius: 2px;">
+          DP
+        </div>
+      </div>
+
+      <!-- PORTADA PRINCIPAL (DERECHA) -->
+      <div class="panel-front">
+        <div class="genre-tag">
+          ${metadata.genre || "NUEVA EDICIÓN INDUSTRIAL"}
+        </div>
+
+        <div style="margin: auto 0; padding: 0 15px;">
+          ${coverTitleStyle === "serif-capital" ? `
+            <h1 class="front-title-serif">${metadata.title || "TÍTULO DEL LIBRO"}</h1>
+            ${metadata.subtitle ? `<div class="front-subtitle">${metadata.subtitle}</div>` : ""}
+          ` : `
+            <h1 class="front-title-sans">${metadata.title || "TÍTULO DEL LIBRO"}</h1>
+            ${metadata.subtitle ? `<div class="front-subtitle" style="font-family: 'JetBrains Mono', monospace; font-size: 9pt; text-transform: uppercase;">${metadata.subtitle}</div>` : ""}
+          `}
+        </div>
+
+        <div class="author-footer">
+          ${metadata.author || "NOMBRE DEL AUTOR"}
+          <div style="font-size: 8pt; font-family: 'JetBrains Mono', monospace; font-weight: normal; opacity: 0.6; margin-top: 5px; letter-spacing: 2px;">
+            ✦ ${customCoverLogo || "DIAGRAMMERS"} ✦
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- PREPRESS SVG GUIDES -->
+    <svg class="prepress-crop-guides" width="100%" height="100%">
+      <g stroke="#ffffff" stroke-width="0.12" fill="none" opacity="0.35">
+        <!-- Vertical Spine folds lines -->
+        <line x1="${widthMm + bleed}" y1="0" x2="${widthMm + bleed}" y2="${totalHeightMm}" stroke-dasharray="2,2" />
+        <line x1="${widthMm + bleed + spineMm}" y1="0" x2="${widthMm + bleed + spineMm}" y2="${totalHeightMm}" stroke-dasharray="2,2" />
+        
+        <!-- Registration crosshairs (Spine centers) -->
+        <circle cx="${(widthMm * 2 + spineMm) / 2 + bleed}" cy="${bleed / 2}" r="1.5" />
+        <line x1="${(widthMm * 2 + spineMm) / 2 + bleed}" y1="${bleed / 2 - 2.5}" x2="${(widthMm * 2 + spineMm) / 2 + bleed}" y2="${bleed / 2 + 2.5}" />
+        <line x1="${(widthMm * 2 + spineMm) / 2 - 2.5 + bleed}" y1="${bleed / 2}" x2="${(widthMm * 2 + spineMm) / 2 + 2.5 + bleed}" y2="${bleed / 2}" />
+      </g>
+    </svg>
+
+  </div>
+
+  <style>
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+
+</body>
+</html>`;
+
+    triggerFileDownload(htmlContent, coverLayoutName, "text/html;charset=utf-8;");
+    triggerStudioToast("¡Archivo HTML de cubierta KDP descargado con éxito! Ábrelo en tu navegador y haz clic en Imprimir para obtener el PDF del pliego.", "success");
+  };
+
   const exportProfessionalPrintPDF = () => {
     setPrintExportStatus("building");
     
     setTimeout(() => {
-      const { widthMm, heightMm, label } = getPrintDimensions(printSizePreset);
+      const { widthMm, heightMm, label } = getPrintDimensions(kdpTrimSize);
       const bleed = printBleedMm;
       const safe = printSafeMarginMm;
       const totalWidth = widthMm + 2 * bleed;
@@ -3502,7 +3934,7 @@ export default function App() {
 
     /* CONFIGURACIÓN DE PÁGINA FÍSICA */
     @media print {
-      body { background: transparent; }
+      body { background: transparent !important; }
       @page {
         size: ${totalWidth}mm ${totalHeight}mm;
         margin: 0;
@@ -3525,8 +3957,14 @@ export default function App() {
     
     @media print {
       .bleed-box {
-         margin: 0;
-         box-shadow: none;
+         margin: 0 !important;
+         box-shadow: none !important;
+         page-break-before: always !important;
+         page-break-after: always !important;
+         page-break-inside: avoid !important;
+         float: none !important;
+         background: #ffffff !important; /* Force clean white background for real print! */
+         color: #000000 !important;      /* Force black text for high-contrast print! */
       }
     }
 
@@ -3609,6 +4047,8 @@ export default function App() {
       font-size: ${styleSettings.fontSizeBody === "large" ? "12pt" : styleSettings.fontSizeBody === "small" ? "9.5pt" : "11pt"};
       line-height: ${styleSettings.lineHeight === "relaxed" ? "1.65" : "1.4"};
       text-align: ${styleSettings.justification === "left" ? "left" : "justify"};
+      text-justify: inter-word;
+      text-align-last: left;
       flex-1: 1;
     }
 
@@ -3850,6 +4290,17 @@ export default function App() {
 
           // Paragraphs Flow
           p.paragraphs.forEach((pText, pIndex) => {
+            if (pText && typeof pText === "string" && pText.startsWith("__CHAPTER_OPENER_INLINE__:")) {
+              const parts = pText.split(":");
+              const num = parts[1] || "";
+              const title = parts[2] || "";
+              html += `        <div class="inline-chapter-header" style="margin: 25px auto; text-align: center; border-top: 0.15mm solid rgba(0,0,0,0.1); border-bottom: 0.15mm solid rgba(0,0,0,0.1); padding: 5px 0;">\n`;
+              html += `          <span style="font-family: sans-serif; text-transform: uppercase; font-size: 8pt; letter-spacing: 1.5px; color: #b45309; font-weight: bold; display: block;">Capítulo ${num}</span>\n`;
+              html += `          <h4 style="font-family: '${styleSettings.fontTitle}', serif; font-size: 11pt; font-weight: bold; margin: 2px 0 0 0; color: inherit;">${title}</h4>\n`;
+              html += `        </div>\n`;
+              return;
+            }
+
             const isFirst = pIndex === 0 && isOpener;
             if (isFirst && styleSettings.dropCap) {
               const letter = pText.charAt(0);
@@ -12221,6 +12672,51 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                             <span>{isGeneratingCover ? "Creando Obras de Arte..." : "Generar Portadas Sugeridas con IA"}</span>
                           </button>
 
+                          {/* Personal Photo Upload / Direct URL */}
+                          <div className="pt-2.5 border-t border-slate-800/60 space-y-2 text-left">
+                            <label className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block font-mono">2. MODIFICAR FOTO / SUBIR PROPÍA</label>
+                            
+                            <div className="space-y-1">
+                              <span className="text-[8.5px] text-slate-500 block">Pega cualquier enlace de imagen web directa:</span>
+                              <input
+                                type="text"
+                                value={coverArtUrl}
+                                onChange={(e) => {
+                                  setCoverArtUrl(e.target.value);
+                                  triggerStudioToast("Fotografía de portada actualizada mediante enlace web.", "info");
+                                }}
+                                placeholder="https://ejemplo.com/tu-foto.jpg"
+                                className="w-full text-[10px] bg-slate-900 text-slate-200 p-2 rounded-lg border border-slate-800 focus:border-amber-500 focus:outline-none leading-none font-mono"
+                              />
+                            </div>
+                            
+                            <div className="space-y-1">
+                              <span className="text-[8.5px] text-slate-500 block">O sube un archivo de fotografía local de tu dispositivo:</span>
+                              <label className="w-full bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg py-2 px-3 flex items-center justify-center gap-1.5 cursor-pointer transition-all text-[10.5px] font-bold text-amber-500 text-center">
+                                <Upload className="w-3.5 h-3.5 text-amber-500" />
+                                <span>Subir foto desde Ordenador</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      const reader = new FileReader();
+                                      reader.onloadend = () => {
+                                        if (typeof reader.result === "string") {
+                                          setCoverArtUrl(reader.result);
+                                          triggerStudioToast("¡Fotografía de portada cargada con éxito!", "success");
+                                        }
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                  }}
+                                />
+                              </label>
+                            </div>
+                          </div>
+
                           {/* Cover Options Display Panel */}
                           {coverOptions.length > 0 && (
                             <div className="pt-3 border-t border-slate-800/50 space-y-2">
@@ -12487,7 +12983,7 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                                       ))}
                                     </div>
                                     <span className="text-[7.5px] text-slate-900 font-mono font-bold tracking-wider mt-1 uppercase text-center block">
-                                      {metadata.isbn || "ISBN SOLICITADO"}
+                                      {getDiagrammersInternalBarcode()}
                                     </span>
                                   </div>
                                 </div>
@@ -12621,9 +13117,7 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                               </div>
                               <button
                                 id="cover-print-download-layout-btn"
-                                onClick={() => {
-                                  alert("Llamando a la API de exportación de pliegos de alta resolución (CMYK). Tu archivo PDF listo para enviar a la imprenta con las especificaciones técnicas completas está listo en la sección de descargas del navegador.");
-                                }}
+                                onClick={() => withPaymentCheck(exportPrintReadyCover, "Diseño de Cubierta Completa y Lomo (KDP)")}
                                 className="bg-slate-900 hover:bg-slate-850 border border-slate-800 text-amber-400 text-[10px] font-bold py-1.5 px-3 rounded-md flex items-center gap-1.5 transition-all cursor-pointer"
                               >
                                 <Printer className="w-3.5 h-3.5" />
