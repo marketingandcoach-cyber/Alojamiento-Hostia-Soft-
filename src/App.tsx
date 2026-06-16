@@ -4056,10 +4056,26 @@ export default function App() {
       margin: 0;
       text-indent: ${styleSettings.paragraphSpacing === "large" || styleSettings.paragraphSpacing === "medium" ? "0" : "6mm"};
       margin-bottom: ${styleSettings.paragraphSpacing === "large" ? "10pt" : styleSettings.paragraphSpacing === "medium" ? "6pt" : "0"};
+      text-align: ${styleSettings.justification === "left" ? "left" : "justify"};
+      text-justify: inter-word;
+      text-align-last: left !important;
     }
 
     .text-body-flow p.first-paragraph {
       text-indent: 0;
+    }
+
+    /* FORZAR PÁGINA DE DERECHOS/CRÉDITOS Y TABLA DE CONTENIDOS A ENCUADRE CORRECTO */
+    .credits-container-flow, 
+    .credits-container-flow p,
+    .credits-container-flow h2,
+    .toc-container-flow,
+    .toc-container-flow div,
+    .toc-container-flow span {
+      text-align: left !important;
+      text-align-last: left !important;
+      text-justify: none !important;
+      text-indent: 0 !important;
     }
 
     /* CAPÍTULARES ELEGANTES */
@@ -4235,7 +4251,7 @@ export default function App() {
         
         if (p.isCreditsPage) {
           // Credits content
-          html += `        <div style="font-size: 8.5pt; line-height: 1.5; font-family: sans-serif; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">\n`;
+          html += `        <div class="credits-container-flow" style="font-size: 8.5pt; line-height: 1.5; font-family: sans-serif; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">\n`;
           html += `          <div style="border-bottom: 0.2mm solid currentColor; padding-bottom: 4px; margin-bottom: 15px;">\n`;
           html += `            <h2 style="font-size: 11pt; padding:0; margin:0; text-transform: uppercase; font-family: 'Space Grotesk', sans-serif;">${metadata.title}</h2>\n`;
           if (metadata.subtitle) html += `            <p style="font-style: italic; margin: 3px 0; font-size: 9pt;">${metadata.subtitle}</p>\n`;
@@ -4263,7 +4279,7 @@ export default function App() {
           html += `        </div>\n`;
         } else if (p.isTOCPage) {
           // TOC Content
-          html += `        <div style="padding-top: 8mm;">\n`;
+          html += `        <div class="toc-container-flow" style="padding-top: 8mm;">\n`;
           html += `          <h2 style="text-align: center; font-family: '${styleSettings.fontTitle}', serif; font-size: 16pt; text-transform: uppercase; margin-bottom: 25px;">Índice General</h2>\n`;
           html += `          <div style="display: flex; flex-direction: column; gap: 4mm;">\n`;
           

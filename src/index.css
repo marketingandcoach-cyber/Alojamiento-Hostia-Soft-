@@ -76,6 +76,13 @@
   .book-spine-right {
     box-shadow: inset 15px 0 25px -10px rgba(0, 0, 0, 0.15);
   }
+
+  /* Robust and consistent text justification rules */
+  .text-justify, .text-justify p {
+    text-align: justify !important;
+    text-justify: inter-word !important;
+    text-align-last: left !important;
+  }
 }
 
 /* Print Setup */
