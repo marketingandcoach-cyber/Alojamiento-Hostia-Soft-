@@ -1044,6 +1044,15 @@ export default function App() {
   const [cloudSaveAuthor, setCloudSaveAuthor] = useState<string | null>(null);
   const [showSyncNotification, setShowSyncNotification] = useState<boolean>(false);
 
+  // --- AUTHOR GATEWAY CONFIG STATE (PAYPAL, STRIPE, BANK) ---
+  const [payPalEmail, setPayPalEmail] = useState<string>("ruthgmedina@gmail.com");
+  const [stripePubKey, setStripePubKey] = useState<string>("");
+  const [bankTransferData, setBankTransferData] = useState<string>("IBAN: ES21 1234 5678 9012 3456 7890\nBeneficiario: Ruth G. Medina\nConcepto: [Título del Libro]");
+  const [selectedConfigPaymentMethod, setSelectedConfigPaymentMethod] = useState<"paypal" | "stripe" | "bank">("paypal");
+  const [paymentIsTestMode, setPaymentIsTestMode] = useState<boolean>(true);
+  const [currencyCode, setCurrencyCode] = useState<string>("EUR");
+  const [bookSalesPrice, setBookSalesPrice] = useState<number>(14.99);
+
   const applyStateObject = (payload: any) => {
     if (!payload) return;
     if (payload.metadata) setMetadata(payload.metadata);
@@ -1069,6 +1078,15 @@ export default function App() {
     if (payload.includeTableOfContents !== undefined) setIncludeTableOfContents(payload.includeTableOfContents);
     if (payload.tocTitle) setTocTitle(payload.tocTitle);
     if (payload.tocStyle) setTocStyle(payload.tocStyle);
+    
+    // Configurable payment parameters
+    if (payload.payPalEmail !== undefined) setPayPalEmail(payload.payPalEmail);
+    if (payload.stripePubKey !== undefined) setStripePubKey(payload.stripePubKey);
+    if (payload.bankTransferData !== undefined) setBankTransferData(payload.bankTransferData);
+    if (payload.selectedConfigPaymentMethod !== undefined) setSelectedConfigPaymentMethod(payload.selectedConfigPaymentMethod);
+    if (payload.paymentIsTestMode !== undefined) setPaymentIsTestMode(payload.paymentIsTestMode);
+    if (payload.currencyCode !== undefined) setCurrencyCode(payload.currencyCode);
+    if (payload.bookSalesPrice !== undefined) setBookSalesPrice(payload.bookSalesPrice);
 
     // Persist to local storage to make sure any reload keeps it
     if (payload.metadata) localStorage.setItem("editorial_meta", JSON.stringify(payload.metadata));
@@ -1082,6 +1100,14 @@ export default function App() {
     if (payload.generatedPitches) localStorage.setItem("outreach_pitches", JSON.stringify(payload.generatedPitches));
     if (payload.synopsisText) localStorage.setItem("outreach_synopsis", payload.synopsisText);
     if (payload.isMaverickMember !== undefined) localStorage.setItem("is_maverick_member", payload.isMaverickMember ? "true" : "false");
+
+    if (payload.payPalEmail !== undefined) localStorage.setItem("payment_paypal_email", payload.payPalEmail);
+    if (payload.stripePubKey !== undefined) localStorage.setItem("payment_stripe_pub_key", payload.stripePubKey);
+    if (payload.bankTransferData !== undefined) localStorage.setItem("payment_bank_data", payload.bankTransferData);
+    if (payload.selectedConfigPaymentMethod !== undefined) localStorage.setItem("payment_selected_method", payload.selectedConfigPaymentMethod);
+    if (payload.paymentIsTestMode !== undefined) localStorage.setItem("payment_test_mode", JSON.stringify(payload.paymentIsTestMode));
+    if (payload.currencyCode !== undefined) localStorage.setItem("payment_currency", payload.currencyCode);
+    if (payload.bookSalesPrice !== undefined) localStorage.setItem("payment_book_price", JSON.stringify(payload.bookSalesPrice));
   };
 
   const fetchCloudSyncInfo = async (showBannerNotification = false) => {
@@ -1141,7 +1167,14 @@ export default function App() {
       customCoverLogo,
       includeTableOfContents,
       tocTitle,
-      tocStyle
+      tocStyle,
+      payPalEmail,
+      stripePubKey,
+      bankTransferData,
+      selectedConfigPaymentMethod,
+      paymentIsTestMode,
+      currencyCode,
+      bookSalesPrice
     };
 
     try {
@@ -1257,6 +1290,22 @@ export default function App() {
     if (storedSynopsis) {
       setSynopsisText(storedSynopsis);
     }
+
+    // Load custom author payment configs
+    const storedPaypal = localStorage.getItem("payment_paypal_email");
+    if (storedPaypal) setPayPalEmail(storedPaypal);
+    const storedStripe = localStorage.getItem("payment_stripe_pub_key");
+    if (storedStripe) setStripePubKey(storedStripe);
+    const storedBank = localStorage.getItem("payment_bank_data");
+    if (storedBank) setBankTransferData(storedBank);
+    const storedMethod = localStorage.getItem("payment_selected_method");
+    if (storedMethod) setSelectedConfigPaymentMethod(storedMethod as any);
+    const storedTest = localStorage.getItem("payment_test_mode");
+    if (storedTest !== null) setPaymentIsTestMode(storedTest === "true");
+    const storedCurr = localStorage.getItem("payment_currency");
+    if (storedCurr) setCurrencyCode(storedCurr);
+    const storedPrice = localStorage.getItem("payment_book_price");
+    if (storedPrice !== null) setBookSalesPrice(parseFloat(storedPrice) || 14.99);
     
     // Check for multi-device cloud saves on startup!
     fetchCloudSyncInfo(true);
@@ -8689,6 +8738,292 @@ ${generatedScreenplayText}
                     </div>
                   </div>
 
+                </div>
+
+                {/* 💳 PASARELAS DE PAGO Y CONFIGURACIÓN COMERCIAL PARA VENTAS DIRECTAS */}
+                <div id="author-payment-settings" className="bg-gradient-to-br from-indigo-950/40 via-slate-900 to-slate-900 border border-indigo-500/30 rounded-xl p-5 space-y-6 shadow-xl">
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-indigo-500/20 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-500/15 flex items-center justify-center text-indigo-400">
+                        <DollarSign className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-extrabold uppercase tracking-wider text-white">
+                          Pasarelas de Pago Directo y Configuración Comercial
+                        </h4>
+                        <p className="text-[10px] text-indigo-400 font-sans mt-0.5">
+                          Configura cómo recibirás tus ingresos de forma inmediata cuando promociones tu libro
+                        </p>
+                      </div>
+                    </div>
+                    {/* Safe Secure Indicator */}
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/25 text-[10px] font-bold uppercase tracking-wider">
+                      <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Pago Seguro • SSL Activo</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Left: Configuration selections */}
+                    <div className="md:col-span-2 space-y-4">
+                      {/* Explanatory notes */}
+                      <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                        Introduce tu cuenta de cobro para activar la <strong>página de venta directa al autónomo / autopublicado</strong>. Los lectores podrán pagarte con tarjeta, PayPal o transferencia bancaria y los fondos se ingresarán de manera segura e instantánea a tu saldo <strong>sin intermediarios ni comisiones de editoriales</strong>.
+                      </p>
+
+                      {/* Selector de pasarela */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                          Selecciona el método de cobro primordial para tus lectores:
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedConfigPaymentMethod("paypal");
+                              localStorage.setItem("payment_selected_method", "paypal");
+                            }}
+                            className={`py-2 px-3 rounded-lg border text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                              selectedConfigPaymentMethod === "paypal"
+                                ? "bg-indigo-650 text-white border-indigo-400"
+                                : "bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850 hover:border-slate-700"
+                            }`}
+                          >
+                            <span className="font-sans text-[11px] tracking-wide">PayPal</span>
+                            <span className="text-[8px] opacity-70 font-normal">Corriente y Seguro</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedConfigPaymentMethod("stripe");
+                              localStorage.setItem("payment_selected_method", "stripe");
+                            }}
+                            className={`py-2 px-3 rounded-lg border text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                              selectedConfigPaymentMethod === "stripe"
+                                ? "bg-indigo-650 text-white border-indigo-400"
+                                : "bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850 hover:border-slate-700"
+                            }`}
+                          >
+                            <span className="font-sans text-[11px] tracking-wide">Stripe</span>
+                            <span className="text-[8px] opacity-70 font-normal">Tarjetas de Crédito</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedConfigPaymentMethod("bank");
+                              localStorage.setItem("payment_selected_method", "bank");
+                            }}
+                            className={`py-2 px-3 rounded-lg border text-xs font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                              selectedConfigPaymentMethod === "bank"
+                                ? "bg-indigo-650 text-white border-indigo-400"
+                                : "bg-slate-950 hover:bg-slate-900 text-slate-400 border-slate-850 hover:border-slate-700"
+                            }`}
+                          >
+                            <span className="font-sans text-[11px] tracking-wide font-sans">Banco</span>
+                            <span className="text-[8px] opacity-70 font-normal">Transferencia Directa</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Dynamic forms based on selection */}
+                      <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 space-y-4">
+                        {selectedConfigPaymentMethod === "paypal" && (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 font-mono">Configuración de Pasarela PayPal</span>
+                              <span className="text-[8px] bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded font-bold uppercase tracking-wider">Recomendado</span>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10.5px] text-slate-400 block font-semibold">Correo de Destinatario PayPal (Payee Email):</label>
+                              <div className="relative">
+                                <input
+                                  type="email"
+                                  value={payPalEmail}
+                                  onChange={(e) => {
+                                    setPayPalEmail(e.target.value);
+                                    localStorage.setItem("payment_paypal_email", e.target.value);
+                                  }}
+                                  placeholder="ejemplo@paypal.com"
+                                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 text-white font-mono"
+                                />
+                                <span className="absolute right-3 top-2.5 text-[9px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1 bg-slate-950/80 px-1.5 py-0.2 rounded">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                  Activo
+                                </span>
+                              </div>
+                              <span className="text-[9px] text-slate-500 block leading-normal select-none">
+                                * Los pagos de tus compradores se enviarán de forma directa sin comisiones de Diagrammers a tu cuenta de PayPal <strong>{payPalEmail}</strong>.
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedConfigPaymentMethod === "stripe" && (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 font-mono">Configuración de Pasarela Stripe</span>
+                              <span className="text-[8px] bg-violet-500/10 text-violet-300 px-2 py-0.5 rounded font-bold uppercase tracking-wider">Tarjetas SSL</span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="space-y-1.5">
+                                <label className="text-[10.5px] text-slate-400 block font-semibold font-sans">API Key Pública o Identificador Stripe:</label>
+                                <input
+                                  type="text"
+                                  value={stripePubKey}
+                                  onChange={(e) => {
+                                    setStripePubKey(e.target.value);
+                                    localStorage.setItem("payment_stripe_pub_key", e.target.value);
+                                  }}
+                                  placeholder="pk_live_..."
+                                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 text-white font-mono"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[10.5px] text-slate-400 block font-semibold">Divisa de Venta / Mercado comercial:</label>
+                                <select
+                                  value={currencyCode}
+                                  onChange={(e) => {
+                                    setCurrencyCode(e.target.value);
+                                    localStorage.setItem("payment_currency", e.target.value);
+                                  }}
+                                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 text-slate-200"
+                                >
+                                  <option value="EUR">Euros (€) - España e internacional</option>
+                                  <option value="USD">Dólar Americano ($) - Global</option>
+                                  <option value="MXN">Peso Mexicano ($)</option>
+                                  <option value="ARS">Peso Argentino ($)</option>
+                                  <option value="COP">Peso Colombiano ($)</option>
+                                  <option value="CLP">Peso Chileno ($)</option>
+                                </select>
+                              </div>
+                            </div>
+                            <span className="text-[9px] text-slate-500 block leading-normal">
+                              Stripe es ideal para que tus lectores paguen mediante tarjetas de débito/crédito (Visa, Mastercard, Apple Pay). No compartas llaves secretas.
+                            </span>
+                          </div>
+                        )}
+
+                        {selectedConfigPaymentMethod === "bank" && (
+                          <div className="space-y-3 font-sans">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 font-mono block">Información de Transferencia Bancaria</span>
+                            <div className="space-y-1.5">
+                              <label className="text-[10.5px] text-slate-400 block font-semibold">Detalles del IBAN, CLABE o Cuenta:</label>
+                              <textarea
+                                value={bankTransferData}
+                                onChange={(e) => {
+                                  setBankTransferData(e.target.value);
+                                  localStorage.setItem("payment_bank_data", e.target.value);
+                                }}
+                                rows={2}
+                                className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs focus:outline-none focus:border-indigo-500 text-white font-mono leading-relaxed"
+                                placeholder="Escribe tu IBAN, Titular y Banco receptor..."
+                              />
+                              <span className="text-[9px] text-slate-500 block font-sans">
+                                Los lectores que prefieran este método verán tu cuenta y te enviarán capturas de pantalla para validar. Idóneo para transacciones locales abundantes.
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Común: Configuración de Precio para Promociones Masivas */}
+                        <div className="border-t border-slate-900 pt-3 flex flex-wrap gap-4 items-center justify-between">
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-bold text-slate-400 block font-sans">PRECIO DEL COMPRADOR (MANUSCRITO / LIBRO COMPLETO):</span>
+                            <span className="text-[9px] text-slate-500">Define el precio unitario del ejemplar físico/digital</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={bookSalesPrice}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                setBookSalesPrice(val);
+                                localStorage.setItem("payment_book_price", String(val));
+                              }}
+                              className="w-24 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-right font-mono font-bold text-slate-100"
+                            />
+                            <span className="text-xs font-mono text-slate-400 font-bold select-none">{currencyCode}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* "Elige un entorno seguro" block */}
+                      <div className="p-3 bg-slate-950 rounded-xl border border-slate-850 flex items-center justify-between gap-4 font-sans">
+                        <div className="space-y-0.5">
+                          <span className="text-[10px] font-bold text-slate-300 block uppercase tracking-wide">🔒 Selección de Entorno Comercial de Cobro</span>
+                          <span className="text-[9px] text-slate-500 leading-normal block">
+                            {paymentIsTestMode 
+                              ? "Modo Seguro Sandbox de Pruebas: Simula pagos exitosos con tarjetas simuladas sin gastar." 
+                              : "Modo de Producción Comercial: Los cobros ingresan de forma real y cifrada en tu cuenta de cobro."}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 scale-90 shrink-0">
+                          <span className={`text-[9px] uppercase font-bold tracking-wider ${paymentIsTestMode ? "text-indigo-400" : "text-slate-500"}`}>Draft Sandbox</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newVal = !paymentIsTestMode;
+                              setPaymentIsTestMode(newVal);
+                              localStorage.setItem("payment_test_mode", JSON.stringify(newVal));
+                            }}
+                            className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer outline-none ${
+                              paymentIsTestMode ? "bg-indigo-600/60" : "bg-emerald-600"
+                            }`}
+                          >
+                            <span className={`absolute top-1 left-1 bg-white rounded-full w-4 h-4 transition-transform ${
+                              paymentIsTestMode ? "translate-x-0" : "translate-x-5"
+                            }`}></span>
+                          </button>
+                          <span className={`text-[9px] uppercase font-bold tracking-wider ${!paymentIsTestMode ? "text-emerald-400" : "text-slate-500"}`}>Live Real SSL</span>
+                        </div>
+                      </div>
+
+                    </div>
+
+                    {/* Right Panel: GASTOS DE COMPARTIR Y PUBLICAR */}
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 flex flex-col justify-between space-y-4 font-sans">
+                      <div className="space-y-3">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 block font-mono">Pregunta de Autoría: ¿Gastos de Compartir?</span>
+                        <div className="space-y-2 text-[11px] leading-relaxed text-slate-300">
+                          <p>
+                            Al hacer clic en <strong>"Compartir"</strong> en Google AI Studio o compilar y desplegar en producción, <strong>no incurres en ningún tipo de gasto de infraestructura</strong>.
+                          </p>
+                          <div className="bg-indigo-500/5 p-2 rounded-lg border border-indigo-550/15 text-[10px] text-indigo-300">
+                            <strong>105% Gratuito:</strong> Tu servidor de Node.js Express, la base de datos Firestore y el alojamiento web se ejecutan de manera gratuita en los servidores dedicados proporcionados por la plataforma.
+                          </div>
+                          <div className="bg-emerald-500/5 p-2 rounded-lg border border-emerald-555/15 text-[10px] text-emerald-300">
+                            <strong>Cero Comisiones:</strong> Cuando promociones masivamente tu libro y tus compradores efectúen un pago a tu dirección <strong className="text-white select-all font-mono">ruthgmedina@gmail.com</strong>, el cobro entra directo a ti. ¡Sin cargos de intermediarios!
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-900 pt-3 space-y-2">
+                        <span className="text-[10px] font-bold text-slate-400 block uppercase">Previsualizador de Botón de Venta:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (selectedConfigPaymentMethod === "paypal") {
+                              alert(`Simulador de Pasarela Segura:\n\nIniciando pago cifrado de ${bookSalesPrice} ${currencyCode} dirigido a ${payPalEmail}.\n\nPara promociones masivas, este botón redirigirá de manera directa con SSL al portal de PayPal.`);
+                            } else if (selectedConfigPaymentMethod === "stripe") {
+                              alert(`Simulador de Pasarela Segura:\n\nAbriendo formulario de pago cifrado Stripe Checkout con SSL.\nPrecio: ${bookSalesPrice} ${currencyCode}.\n\nDestinatario registrado: ${payPalEmail}`);
+                            } else {
+                              alert(`Simulador de Transferencia:\n\nMostrando al comprador las instrucciones de depósito:\n\n${bankTransferData}`);
+                            }
+                          }}
+                          className="w-full bg-indigo-650 hover:bg-indigo-700 hover:scale-[1.01] active:scale-[0.99] transition-all text-white font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 text-xs shadow-md cursor-pointer"
+                        >
+                          <DollarSign className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span>Pagar {bookSalesPrice} {currencyCode}</span>
+                        </button>
+                        <span className="text-[8px] text-slate-500 block text-center italic">
+                          Al hacer la promoción masiva, tus lectores comprarán al instante y de forma directa.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* 📝 DOCUMENTACIÓN FORMAL PARA REGISTRO DE DERECHOS DE AUTOR EN WORD */}
