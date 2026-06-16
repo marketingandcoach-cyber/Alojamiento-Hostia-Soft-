@@ -6510,71 +6510,34 @@ ${generatedScreenplayText}
                         </button>
                         
                         <div className="relative flex-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsTitleFontDropdownOpen(!isTitleFontDropdownOpen);
-                              setIsBodyFontDropdownOpen(false);
+                          <select
+                            value={styleSettings.fontTitle}
+                            onChange={(e) => {
+                              const updated = { ...styleSettings, fontTitle: e.target.value };
+                              setStyleSettings(updated);
+                              saveToLocalStorage(metadata, updated, chapters);
                             }}
-                            className="w-full flex items-center justify-between text-xs bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none focus:border-amber-500 cursor-pointer transition-colors"
+                            className="w-full text-xs font-semibold bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg p-2.5 pr-8 text-slate-200 outline-none focus:border-amber-500 cursor-pointer appearance-none transition-colors"
+                            style={{ fontFamily: styleSettings.fontTitle }}
                           >
-                            <div className="flex flex-col items-start gap-0.5 text-left truncate max-w-[85%]">
-                              <span className="font-semibold text-slate-350">{styleSettings.fontTitle}</span>
-                              <span className="text-[10.5px] text-amber-500/90 italic font-medium truncate w-full" style={{ fontFamily: `"${styleSettings.fontTitle}", serif` }}>
-                                Vista Previa Editorial
-                              </span>
-                            </div>
-                            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isTitleFontDropdownOpen ? "rotate-180" : ""}`} />
-                          </button>
-
-                          {/* Invisible click-out overlay */}
-                          {isTitleFontDropdownOpen && (
-                            <div 
-                              className="fixed inset-0 z-25 cursor-default" 
-                              onClick={() => setIsTitleFontDropdownOpen(false)} 
-                            />
-                          )}
-
-                          {isTitleFontDropdownOpen && (
-                            <div className="absolute left-0 right-0 mt-1 max-h-[290px] overflow-y-auto bg-slate-900 border border-slate-800 rounded-lg shadow-2xl z-30 divide-y divide-slate-850/50 scrollbar-thin">
-                              {TITLE_FONTS.map((font) => {
-                                const isSelected = styleSettings.fontTitle === font.value;
-                                return (
-                                  <button
-                                    key={font.value}
-                                    type="button"
-                                    onClick={() => {
-                                      const updated = { ...styleSettings, fontTitle: font.value };
-                                      setStyleSettings(updated);
-                                      saveToLocalStorage(metadata, updated, chapters);
-                                      setIsTitleFontDropdownOpen(false);
-                                    }}
-                                    className={`w-full text-left p-2.5 transition-colors flex flex-col gap-1 cursor-pointer ${
-                                      isSelected ? "bg-amber-500/15 hover:bg-amber-500/20" : "hover:bg-slate-850/80"
-                                    }`}
-                                  >
-                                    <div className="flex items-center justify-between gap-1">
-                                      <span className={`text-[11.5px] ${isSelected ? "text-amber-400 font-bold" : "text-slate-200"}`}>
-                                        {font.label}
-                                      </span>
-                                      <span className="text-[8.5px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-950 text-slate-400 font-mono border border-slate-850 shrink-0">
-                                        {font.cat}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-3 mt-0.5">
-                                      <span className="text-[9.5px] text-slate-500 truncate max-w-[130px]">{font.desc}</span>
-                                      <span 
-                                        className={`text-sm tracking-wide shrink-0 ${isSelected ? "text-amber-300" : "text-slate-400"}`}
-                                        style={{ fontFamily: `"${font.value}", serif` }}
-                                      >
-                                        {font.sample}
-                                      </span>
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
+                            {TITLE_FONTS.map((font) => (
+                              <option 
+                                key={font.value} 
+                                value={font.value} 
+                                className="bg-slate-950 text-slate-200"
+                              >
+                                {font.label} ({font.cat}) — {font.desc}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </div>
+                          
+                          {/* Muestra tipográfica real justo debajo */}
+                          <div className="mt-1 text-[10.5px] text-amber-500/90 italic font-semibold truncate select-none" style={{ fontFamily: `"${styleSettings.fontTitle}", serif` }}>
+                            Muestra: {TITLE_FONTS.find(f => f.value === styleSettings.fontTitle)?.sample || "Vista Previa"}
+                          </div>
                         </div>
 
                         <button
@@ -6642,71 +6605,34 @@ ${generatedScreenplayText}
                         </button>
 
                         <div className="relative flex-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsBodyFontDropdownOpen(!isBodyFontDropdownOpen);
-                              setIsTitleFontDropdownOpen(false);
+                          <select
+                            value={styleSettings.fontBody}
+                            onChange={(e) => {
+                              const updated = { ...styleSettings, fontBody: e.target.value };
+                              setStyleSettings(updated);
+                              saveToLocalStorage(metadata, updated, chapters);
                             }}
-                            className="w-full flex items-center justify-between text-xs bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg p-2.5 text-slate-200 outline-none focus:border-amber-500 cursor-pointer transition-colors"
+                            className="w-full text-xs font-semibold bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg p-2.5 pr-8 text-slate-200 outline-none focus:border-amber-500 cursor-pointer appearance-none transition-colors"
+                            style={{ fontFamily: styleSettings.fontBody }}
                           >
-                            <div className="flex flex-col items-start gap-0.5 text-left truncate max-w-[85%]">
-                              <span className="font-semibold text-slate-350">{styleSettings.fontBody}</span>
-                              <span className="text-[10.5px] text-amber-500/90 italic font-medium truncate w-full" style={{ fontFamily: `"${styleSettings.fontBody}", serif` }}>
-                                Lectura Maquetada
-                              </span>
-                            </div>
-                            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isBodyFontDropdownOpen ? "rotate-180" : ""}`} />
-                          </button>
+                            {BODY_FONTS.map((font) => (
+                              <option 
+                                key={font.value} 
+                                value={font.value} 
+                                className="bg-slate-950 text-slate-200"
+                              >
+                                {font.label} ({font.cat}) — {font.desc}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </div>
 
-                          {/* Invisible click-out overlay */}
-                          {isBodyFontDropdownOpen && (
-                            <div 
-                              className="fixed inset-0 z-25 cursor-default" 
-                              onClick={() => setIsBodyFontDropdownOpen(false)} 
-                            />
-                          )}
-
-                          {isBodyFontDropdownOpen && (
-                            <div className="absolute left-0 right-0 mt-1 max-h-[250px] overflow-y-auto bg-slate-900 border border-slate-800 rounded-lg shadow-2xl z-30 divide-y divide-slate-850/50 scrollbar-thin">
-                              {BODY_FONTS.map((font) => {
-                                const isSelected = styleSettings.fontBody === font.value;
-                                return (
-                                  <button
-                                    key={font.value}
-                                    type="button"
-                                    onClick={() => {
-                                      const updated = { ...styleSettings, fontBody: font.value };
-                                      setStyleSettings(updated);
-                                      saveToLocalStorage(metadata, updated, chapters);
-                                      setIsBodyFontDropdownOpen(false);
-                                    }}
-                                    className={`w-full text-left p-2.5 transition-colors flex flex-col gap-1 cursor-pointer ${
-                                      isSelected ? "bg-amber-500/15 hover:bg-amber-500/20" : "hover:bg-slate-850/80"
-                                    }`}
-                                  >
-                                    <div className="flex items-center justify-between gap-1">
-                                      <span className={`text-[11.5px] ${isSelected ? "text-amber-400 font-bold" : "text-slate-200"}`}>
-                                        {font.label}
-                                      </span>
-                                      <span className="text-[8.5px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-950 text-slate-300 font-mono border border-slate-850 shrink-0">
-                                        {font.cat}
-                                      </span>
-                                    </div>
-                                    <div className="mt-0.5">
-                                      <p className="text-[9.5px] text-slate-500 leading-tight mb-1">{font.desc}</p>
-                                      <p 
-                                        className={`text-[10.5px] leading-relaxed truncate ${isSelected ? "text-amber-300/95" : "text-slate-400"}`}
-                                        style={{ fontFamily: `"${font.value}", serif` }}
-                                      >
-                                        {font.sample}
-                                      </p>
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
+                          {/* Muestra tipográfica real justo debajo */}
+                          <div className="mt-1 text-[10.5px] text-amber-500/90 italic font-semibold truncate select-none animate-fade-in" style={{ fontFamily: `"${styleSettings.fontBody}", serif` }}>
+                            Muestra: {BODY_FONTS.find(f => f.value === styleSettings.fontBody)?.sample || "Vista Previa"}
+                          </div>
                         </div>
 
                         <button
