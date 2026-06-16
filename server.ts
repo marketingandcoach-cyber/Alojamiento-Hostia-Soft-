@@ -42,10 +42,17 @@ async function generateContentWithRetry(params: any, retries = 3, initialDelay =
   // Create an explicit sequence of model fallback options to ensure maximum robustness
   const modelsToTry = [params.model];
   if (params.model === "gemini-3.5-flash") {
+    modelsToTry.push("gemini-2.5-flash");
+    modelsToTry.push("gemini-1.5-flash");
     modelsToTry.push("gemini-flash-latest");
     modelsToTry.push("gemini-3.1-flash-lite");
   } else if (params.model === "gemini-flash-latest") {
+    modelsToTry.push("gemini-2.5-flash");
+    modelsToTry.push("gemini-1.5-flash");
     modelsToTry.push("gemini-3.1-flash-lite");
+  } else {
+    modelsToTry.push("gemini-2.5-flash");
+    modelsToTry.push("gemini-1.5-flash");
   }
 
   for (const modelName of modelsToTry) {
@@ -61,13 +68,13 @@ async function generateContentWithRetry(params: any, retries = 3, initialDelay =
         const isTransient = error.status === 503 || error.status === 429 || 
                             errMsg.includes("503") || errMsg.includes("429") || 
                             errMsg.includes("UNAVAILABLE") || errMsg.includes("high demand") || 
-                            errMsg.includes("overloaded") || errMsg.includes("temporary");
+                            errMsg.includes("overloaded") || errMsg.includes("temporary") ||
+                            errMsg.includes("quota");
 
-        // If there's another model in our fallback list, transition immediately to avoid user-visible errors
+        // If there's another model in our fallback list and we fail on quota/transient, transition immediately to avoid user-visible errors
         const currentIdx = modelsToTry.indexOf(modelName);
-        if (currentIdx !== -1 && currentIdx < modelsToTry.length - 1) {
+        if (isTransient && currentIdx !== -1 && currentIdx < modelsToTry.length - 1) {
           const nextModel = modelsToTry[currentIdx + 1];
-          // Use non-scary, developer positive logs to describe synchronization/loading adjustments
           console.info(`[Gemini API] Optimización de carga: balanceando de ${modelName} a ${nextModel} debido a latencia o restricción de cuota.`);
           break; // break the retry loop and continue to the next model in the outer loop
         }
@@ -77,7 +84,7 @@ async function generateContentWithRetry(params: any, retries = 3, initialDelay =
         if (isTransient && attempt < retries) {
           console.log(`[Gemini API] Detectado error transitorio. Reintentando en ${delay}ms... (Próximo intento: ${attempt + 1})`);
           await new Promise(resolve => setTimeout(resolve, delay));
-          delay *= 1.8; // exponential backoff with a smooth multiplier
+          delay *= 2.0; // exponential backoff with a robust multiplier
         } else {
           // If this is the final candidate, throw the exception up so the system knows of a hard error
           if (currentIdx === modelsToTry.length - 1) {
@@ -1389,8 +1396,18 @@ Responde siempre en formato JSON con la estructura del responseSchema.
     res.json(result);
   } catch (error: any) {
     console.error("Error in Dagramito Chat:", error);
+    // Determine if it was a quota issue or general error to customize response
+    const errMsg = (error.message || "").toLowerCase();
+    const isQuota = errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate limit") || errMsg.includes("exhausted");
+    
+    let botResponse = "¡Hola! Soy Guiautor AI, tu mentor y guardián de maquetación en DIAGRAMMERS. En este momento, el gremio de servidores de IA de Google está experimentando una cola de impresión virtual saturada o hay un límite temporal de cuota excedido. ¡Pero la buena noticia es que todos los pliegos matemáticos de tu pantalla, el corrector RAE y las opciones tipográficas locales siguen funcionando de maravilla al 100%! Puedes activar las fuentes, márgenes de corte, sangrados para KDP o exportar tus archivos sin interferencias desde las barras de configuración.";
+    
+    if (isQuota) {
+      botResponse = "¡Hola! Soy Guiautor AI de DIAGRAMMERS. He detectado que los servidores de IA de Google han reportado una saturación temporal de cuota. ¡No te preocupes en absoluto! Mientras la cuota de Google se refresca, puedes utilizar todas las herramientas interactivas del pliego en tu pantalla. ¿Quieres que te asesore sobre los tamaños oficiales de Amazon KDP (como 6x9, 5.5x8.5 o bolsillo 5x8) para que los apliques tú mismo con un clic en la pestaña de Formatos? ¡Todo está listo en local para ti!";
+    }
+
     res.json({
-      text: "¡Hola! Soy Dagramito en modo de asistencia local de respaldo. En este momento nuestros servidores principales del gremio de patitos editores están experimentando un altísimo caudal de impresión tradicional y encuadernación. ¡Pero no te preocupes, todos los pliegos y herramientas de tu pantalla siguen de punta en blanco y listas para exportar! ¿Tienes dudas sobre el formato de página, tamaños de KDP (6x9, 5x5.8) o márgenes de guillotina? ¡Dime aquí!",
+      text: botResponse,
       actions: []
     });
   }
