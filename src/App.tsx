@@ -480,6 +480,14 @@ export default function App() {
     // Find all pages that are chapter openers
     const tocEntries = pages.filter(p => !p.isCreditsPage && !p.isTOCPage && p.isChapterOpener);
 
+    // Dynamic pagination: get current TOC page index among all TOC pages
+    const tocPages = pages.filter(p => p.isTOCPage);
+    const currentTocIndex = Math.max(0, tocPages.findIndex(p => p.pageNumber === page.pageNumber));
+    const chaptersPerPage = 14;
+    const sliceStart = currentTocIndex * chaptersPerPage;
+    const sliceEnd = sliceStart + chaptersPerPage;
+    const pagedTocEntries = tocEntries.slice(sliceStart, sliceEnd);
+
     return (
       <div className="flex-1 flex flex-col justify-between h-full select-none" style={{ fontFamily: `"${styleSettings.fontBody}", serif` }}>
         <div className="space-y-6 mt-4">
@@ -491,18 +499,18 @@ export default function App() {
                 fontFamily: `"${styleSettings.fontTitle}", serif`,
               }}
             >
-              {tocTitle || "Índice"}
+              {tocTitle || "Índice"}{tocPages.length > 1 ? ` (${currentTocIndex + 1}/${tocPages.length})` : ""}
             </h2>
             <div className="w-8 h-0.5 bg-amber-500 mx-auto opacity-75"></div>
           </div>
 
           {/* Chapters list */}
           <div className="space-y-3 pt-2">
-            {tocEntries.length === 0 ? (
+            {pagedTocEntries.length === 0 ? (
               <p className="text-center text-xs opacity-60 italic py-8">No hay capítulos para mostrar.</p>
             ) : (
-              <div className="space-y-3.5 max-h-[380px] overflow-y-auto pr-1">
-                {tocEntries.map((entry, index) => {
+              <div className="space-y-3.5">
+                {pagedTocEntries.map((entry, index) => {
                   return (
                     <div 
                       key={index} 
@@ -1481,14 +1489,18 @@ export default function App() {
     }
 
     if (includeTableOfContents) {
-      simulated.push({
-        pageNumber: absolutePageCounter++,
-        chapterNumber: -1,
-        chapterTitle: tocTitle || "Índice de Capítulos",
-        paragraphs: [],
-        isChapterOpener: false,
-        isTOCPage: true
-      });
+      const chaptersPerPage = 14;
+      const totalTocPages = Math.ceil(chapters.length / chaptersPerPage) || 1;
+      for (let i = 0; i < totalTocPages; i++) {
+        simulated.push({
+          pageNumber: absolutePageCounter++,
+          chapterNumber: -1,
+          chapterTitle: totalTocPages > 1 ? `${tocTitle || "Índice de Capítulos"} - Parte ${i + 1}` : (tocTitle || "Índice de Capítulos"),
+          paragraphs: [],
+          isChapterOpener: false,
+          isTOCPage: true
+        });
+      }
     }
 
     // Single consistent state handles both paginations
@@ -3421,17 +3433,32 @@ export default function App() {
                 <p className="text-[6px] opacity-40">Maquetado digital bajo normas B2B.</p>
               </div>
             ) : p.isTOCPage ? (
-              <div className="text-left font-sans py-1">
-                <h4 className="text-[10px] uppercase tracking-wider text-center font-bold mb-2">Índice</h4>
-                <div className="space-y-1">
-                  {chapters.slice(0, 6).map((tc, tcIdx) => (
-                    <div key={tcIdx} className="flex justify-between text-[7.5px] font-mono border-b border-dashed border-current pb-0.5 opacity-85">
-                      <span className="truncate max-w-[140px]">Cap. {tc.chapterNumber} - {tc.title}</span>
-                      <span>Pág. {tcIdx * 3 + 2}</span>
+              (() => {
+                const tocPages = pages.filter(pg => pg.isTOCPage);
+                const currentTocIdx = Math.max(0, tocPages.findIndex(pg => pg.pageNumber === p.pageNumber));
+                const capPerPage = 14;
+                const startIndex = currentTocIdx * capPerPage;
+                const pagedCaps = chapters.slice(startIndex, startIndex + capPerPage);
+                return (
+                  <div className="text-left font-sans py-1">
+                    <h4 className="text-[10px] uppercase tracking-wider text-center font-bold mb-2">
+                      Índice {tocPages.length > 1 ? `(${currentTocIdx + 1}/${tocPages.length})` : ""}
+                    </h4>
+                    <div className="space-y-1">
+                      {pagedCaps.map((tc, index) => {
+                        const chapPage = pages.find((pg) => pg.chapterNumber === tc.chapterNumber);
+                        const pgNum = chapPage ? chapPage.pageNumber : "—";
+                        return (
+                          <div key={index} className="flex justify-between text-[7.5px] font-mono border-b border-dashed border-current pb-0.5 opacity-85">
+                            <span className="truncate max-w-[140px]">Cap. {tc.chapterNumber} - {tc.title}</span>
+                            <span>Pág. {pgNum}</span>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                );
+              })()
             ) : (
               <div className="space-y-1.5 selection:bg-amber-500/20 text-left">
                 {p.isChapterOpener && (
@@ -3934,7 +3961,14 @@ export default function App() {
 
     /* CONFIGURACIÓN DE PÁGINA FÍSICA */
     @media print {
-      body { background: transparent !important; }
+      html, body {
+        width: ${totalWidth}mm !important;
+        height: auto !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+      }
       @page {
         size: ${totalWidth}mm ${totalHeight}mm;
         margin: 0;
@@ -3957,14 +3991,25 @@ export default function App() {
     
     @media print {
       .bleed-box {
+         display: block !important;
+         position: relative !important;
+         width: ${totalWidth}mm !important;
+         height: ${totalHeight}mm !important;
          margin: 0 !important;
+         padding: 0 !important;
          box-shadow: none !important;
-         page-break-before: always !important;
+         page-break-before: auto !important;
          page-break-after: always !important;
          page-break-inside: avoid !important;
+         break-before: auto !important;
+         break-after: page !important;
+         break-inside: avoid !important;
          float: none !important;
          background: #ffffff !important; /* Force clean white background for real print! */
          color: #000000 !important;      /* Force black text for high-contrast print! */
+         overflow: hidden !important;
+         -webkit-column-break-inside: avoid;
+         break-inside: avoid-page;
       }
     }
 
@@ -4279,12 +4324,19 @@ export default function App() {
           html += `        </div>\n`;
         } else if (p.isTOCPage) {
           // TOC Content
+          const tocPages = pages.filter(pg => pg.isTOCPage);
+          const currentTocIndex = Math.max(0, tocPages.findIndex(pg => pg.pageNumber === p.pageNumber));
+          const chaptersPerPage = 14;
+          const sliceStart = currentTocIndex * chaptersPerPage;
+          const sliceEnd = sliceStart + chaptersPerPage;
+          const pagedChapters = chapters.slice(sliceStart, sliceEnd);
+
           html += `        <div class="toc-container-flow" style="padding-top: 8mm;">\n`;
-          html += `          <h2 style="text-align: center; font-family: '${styleSettings.fontTitle}', serif; font-size: 16pt; text-transform: uppercase; margin-bottom: 25px;">Índice General</h2>\n`;
+          html += `          <h2 style="text-align: center; font-family: '${styleSettings.fontTitle}', serif; font-size: 16pt; text-transform: uppercase; margin-bottom: 25px;">Índice General${tocPages.length > 1 ? ` (${currentTocIndex + 1}/${tocPages.length})` : ""}</h2>\n`;
           html += `          <div style="display: flex; flex-direction: column; gap: 4mm;">\n`;
           
           // Render TOC index
-          chapters.forEach((tc) => {
+          pagedChapters.forEach((tc) => {
             const chapPage = pages.find((pg) => pg.chapterNumber === tc.chapterNumber);
             const pgNum = chapPage ? chapPage.pageNumber : "—";
             html += `            <div style="display: flex; justify-content: space-between; font-size: 10pt; font-family: monospace; border-bottom: 0.1mm dotted rgba(0,0,0,0.25); pb: 1px;">\n`;
@@ -12697,9 +12749,16 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                               <input
                                 type="text"
                                 value={coverArtUrl}
-                                onChange={(e) => {
-                                  setCoverArtUrl(e.target.value);
-                                  triggerStudioToast("Fotografía de portada actualizada mediante enlace web.", "info");
+                                onChange={(e) => setCoverArtUrl(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    triggerStudioToast("Fotografía de portada actualizada mediante enlace web.", "success");
+                                  }
+                                }}
+                                onBlur={() => {
+                                  if (coverArtUrl) {
+                                    triggerStudioToast("Fotografía de portada sincronizada.", "success");
+                                  }
                                 }}
                                 placeholder="https://ejemplo.com/tu-foto.jpg"
                                 className="w-full text-[10px] bg-slate-900 text-slate-200 p-2 rounded-lg border border-slate-800 focus:border-amber-500 focus:outline-none leading-none font-mono"
