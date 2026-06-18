@@ -2405,7 +2405,13 @@ export default function App() {
             // Try to guess title from file name
             const cleanName = fileName.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
             setMetadata(prev => {
-              const updated = { ...prev, title: cleanName };
+              const updated = { 
+                ...prev, 
+                title: cleanName,
+                author: prev.author === "Miguel de Cervantes" ? "" : prev.author,
+                subtitle: prev.subtitle === "El ingenioso hidalgo de La Mancha" ? "" : prev.subtitle,
+                publisher: prev.publisher === "Editorial El Clásico" ? "" : prev.publisher
+              };
               // We will call saveToLocalStorage at the end of quick layout
               return updated;
             });
@@ -2433,7 +2439,13 @@ export default function App() {
             // Try to guess title from file name
             const cleanName = fileName.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
             setMetadata(prev => {
-              const updated = { ...prev, title: cleanName };
+              const updated = { 
+                ...prev, 
+                title: cleanName,
+                author: prev.author === "Miguel de Cervantes" ? "" : prev.author,
+                subtitle: prev.subtitle === "El ingenioso hidalgo de La Mancha" ? "" : prev.subtitle,
+                publisher: prev.publisher === "Editorial El Clásico" ? "" : prev.publisher
+              };
               return updated;
             });
 
@@ -3041,14 +3053,17 @@ export default function App() {
   };
 
   const triggerFileDownload = (content: string, filename: string, mimeType: string, bypassDonation = false) => {
+    // If developer mode is active, allow direct bypassing of any paywalls/donations for seamless experience
+    const shouldBypass = bypassDonation || developerUnlock;
+
     // Strict paywall checks first
-    if (metadata.strictPaywallActive && !isMaverickMember && !bypassDonation) {
+    if (metadata.strictPaywallActive && !isMaverickMember && !shouldBypass) {
       setPendingDownload({ content, filename, mimeType });
       setShowProPaywallModal(true);
       return;
     }
 
-    if (metadata.donationActive && metadata.donationLink && !bypassDonation) {
+    if (metadata.donationActive && metadata.donationLink && !shouldBypass) {
       setPendingDownload({ content, filename, mimeType });
       setShowDonationPromptModal(true);
       return;
@@ -3476,7 +3491,7 @@ export default function App() {
                 )}
 
                 <div 
-                  className="text-[8px] leading-relaxed tracking-wide space-y-1.5"
+                  className="text-[8px] leading-relaxed tracking-wide"
                   style={{
                     textAlign: styleSettings.justification === "left" ? "left" : "justify",
                     fontFamily: `"${styleSettings.fontBody}", serif`
@@ -3504,14 +3519,20 @@ export default function App() {
                       const letter = para.charAt(0);
                       const rest = para.slice(1);
                       return (
-                        <p key={ind} className="indent-0">
+                        <p key={ind} style={{
+                          textIndent: "0px",
+                          marginBottom: styleSettings.paragraphSpacing === "large" ? "6px" : styleSettings.paragraphSpacing === "medium" ? "3px" : styleSettings.paragraphSpacing === "small" ? "1.5px" : "0px"
+                        }}>
                           <span className="float-left text-lg font-bold text-amber-800 leading-[1] pr-1 pt-0.5" style={{ fontFamily: `"${styleSettings.fontTitle}", serif` }}>{letter}</span>
                           {rest}
                         </p>
                       );
                     }
                     return (
-                      <p key={ind} style={{ textIndent: styleSettings.paragraphSpacing === "large" || styleSettings.paragraphSpacing === "medium" ? "0" : "4px" }}>
+                      <p key={ind} style={{ 
+                        textIndent: styleSettings.paragraphIndent === "none" ? "0px" : styleSettings.paragraphIndent === "small" ? "4px" : styleSettings.paragraphIndent === "large" ? "12px" : "8px",
+                        marginBottom: styleSettings.paragraphSpacing === "large" ? "6px" : styleSettings.paragraphSpacing === "medium" ? "3px" : styleSettings.paragraphSpacing === "small" ? "1.5px" : "0px"
+                      }}>
                         {para}
                       </p>
                     );
@@ -4096,17 +4117,17 @@ export default function App() {
       font-size: ${styleSettings.fontSizeBody === "large" ? "12pt" : styleSettings.fontSizeBody === "small" ? "9.5pt" : "11pt"};
       line-height: ${styleSettings.lineHeight === "relaxed" ? "1.65" : "1.4"};
       text-align: ${styleSettings.justification === "left" ? "left" : "justify"};
-      text-justify: inter-word;
+      ${styleSettings.justification === "left" ? "" : "text-justify: inter-word;"}
       text-align-last: left;
       flex-1: 1;
     }
 
     .text-body-flow p {
       margin: 0;
-      text-indent: ${styleSettings.paragraphSpacing === "large" || styleSettings.paragraphSpacing === "medium" ? "0" : "6mm"};
-      margin-bottom: ${styleSettings.paragraphSpacing === "large" ? "10pt" : styleSettings.paragraphSpacing === "medium" ? "6pt" : "0"};
+      text-indent: ${styleSettings.paragraphIndent === "none" ? "0" : styleSettings.paragraphIndent === "small" ? "3mm" : styleSettings.paragraphIndent === "large" ? "9mm" : "6mm"};
+      margin-bottom: ${styleSettings.paragraphSpacing === "large" ? "10pt" : styleSettings.paragraphSpacing === "medium" ? "6pt" : styleSettings.paragraphSpacing === "small" ? "3pt" : "0"};
       text-align: ${styleSettings.justification === "left" ? "left" : "justify"};
-      text-justify: inter-word;
+      ${styleSettings.justification === "left" ? "" : "text-justify: inter-word;"}
       text-align-last: left !important;
     }
 
@@ -4180,22 +4201,19 @@ export default function App() {
       pointer-events: none;
     }
   </style>
-</head>
-<body>
-    <script>
-      function toggleGuides(show) {
-        const trims = document.querySelectorAll('.trim-box');
-        const safes = document.querySelectorAll('.safe-margin-box');
-        const svgs = document.querySelectorAll('.prepress-overlay-svg');
-        trims.forEach(el => el.style.borderStyle = show ? 'dashed' : 'none');
-        safes.forEach(el => el.style.borderStyle = show ? 'dotted' : 'none');
-        svgs.forEach(el => {
-          const crosshairs = el.querySelectorAll('g');
-          crosshairs.forEach(ch => ch.style.display = show ? 'block' : 'none');
-        });
-      }
-    </script>
-  </style>
+  <script>
+    function toggleGuides(show) {
+      const trims = document.querySelectorAll('.trim-box');
+      const safes = document.querySelectorAll('.safe-margin-box');
+      const svgs = document.querySelectorAll('.prepress-overlay-svg');
+      trims.forEach(el => el.style.borderStyle = show ? 'dashed' : 'none');
+      safes.forEach(el => el.style.borderStyle = show ? 'dotted' : 'none');
+      svgs.forEach(el => {
+        const crosshairs = el.querySelectorAll('g');
+        crosshairs.forEach(ch => ch.style.display = show ? 'block' : 'none');
+      });
+    }
+  </script>
 </head>
 <body>
   <!-- CONTROL DE PREPRENSA (VISIBLE SOLO EN PANTALLA) -->
@@ -5744,7 +5762,10 @@ ${generatedScreenplayText}
 
   // Trigger browser printing styled with @media print
   const handlePrint = () => {
-    window.print();
+    // Instead of window.print() directly inside sandboxed iframes (which can freeze, fail, or capture a single screenshot),
+    // we open our advanced prepress control modal so the author has a 100% reliable conversion to PDF.
+    setShowPrintPdfModal(true);
+    triggerStudioToast("Abriendo Asistente de Preimpresión Profesional (KDP)", "success");
   };
 
   if (viewMode === "landing") {
