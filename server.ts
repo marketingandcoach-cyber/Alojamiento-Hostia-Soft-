@@ -42,17 +42,14 @@ async function generateContentWithRetry(params: any, retries = 3, initialDelay =
   // Create an explicit sequence of model fallback options to ensure maximum robustness
   const modelsToTry = [params.model];
   if (params.model === "gemini-3.5-flash") {
-    modelsToTry.push("gemini-2.5-flash");
-    modelsToTry.push("gemini-1.5-flash");
     modelsToTry.push("gemini-flash-latest");
     modelsToTry.push("gemini-3.1-flash-lite");
   } else if (params.model === "gemini-flash-latest") {
-    modelsToTry.push("gemini-2.5-flash");
-    modelsToTry.push("gemini-1.5-flash");
+    modelsToTry.push("gemini-3.5-flash");
     modelsToTry.push("gemini-3.1-flash-lite");
-  } else {
-    modelsToTry.push("gemini-2.5-flash");
-    modelsToTry.push("gemini-1.5-flash");
+  } else if (params.model === "gemini-3.1-flash-lite") {
+    modelsToTry.push("gemini-3.5-flash");
+    modelsToTry.push("gemini-flash-latest");
   }
 
   for (const modelName of modelsToTry) {
