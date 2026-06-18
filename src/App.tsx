@@ -1065,6 +1065,10 @@ export default function App() {
   const [bookSalesPrice, setBookSalesPrice] = useState<number>(14.99);
 
   // --- CONTROL DE PAGO DE COMPRADORES PARA DESCARGAS ---
+  const [developerUnlock, setDeveloperUnlock] = useState<boolean>(() => {
+    const stored = localStorage.getItem("developer_unlock_mode");
+    return stored === null ? true : stored === "true";
+  });
   const [bookPurchased, setBookPurchased] = useState<boolean>(() => {
     return localStorage.getItem("payment_book_purchased") === "true";
   });
@@ -1074,7 +1078,7 @@ export default function App() {
   const [paymentSuccessData, setPaymentSuccessData] = useState<any>(null);
 
   const withPaymentCheck = (actionFn: () => void, actionTypeLabel: string) => {
-    if (bookPurchased) {
+    if (bookPurchased || developerUnlock) {
       actionFn();
     } else {
       setPendingExport(() => actionFn);
@@ -9521,6 +9525,37 @@ ${generatedScreenplayText}
                         </div>
                       </div>
 
+                      {/* DETECTOR DE MODO EDITOR BYPASS */}
+                      <div className="p-3 bg-slate-950 rounded-xl border border-slate-850 flex items-center justify-between gap-4 font-sans">
+                        <div className="space-y-0.5 text-left">
+                          <span className="text-[10px] font-bold text-amber-400 block uppercase tracking-wide">🔑 MODO EDITOR (BYPASS PARA PRUEBAS)</span>
+                          <span className="text-[9px] text-slate-500 leading-normal block">
+                            Habilita para omitir el muro de pago simulado de demostración al descargar el PDF de imprenta, el EPUB o el manuscrito Word.
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 scale-90 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const v = !developerUnlock;
+                              setDeveloperUnlock(v);
+                              localStorage.setItem("developer_unlock_mode", JSON.stringify(v));
+                              if (v) {
+                                setBookPurchased(true);
+                                localStorage.setItem("payment_book_purchased", "true");
+                              }
+                            }}
+                            className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer outline-none ${
+                              developerUnlock ? "bg-amber-500" : "bg-slate-700"
+                            }`}
+                          >
+                            <span className={`absolute top-1 left-1 bg-white rounded-full w-4 h-4 transition-transform ${
+                              developerUnlock ? "translate-x-5" : "translate-x-0"
+                            }`}></span>
+                          </button>
+                        </div>
+                      </div>
+
                     </div>
 
                     {/* Right Panel: GASTOS DE COMPARTIR Y PUBLICAR */}
@@ -14831,6 +14866,33 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                           {bookSalesPrice} {currencyCode}
                         </p>
                       </div>
+                    </div>
+
+                    {/* OWNER / EDITOR GRATIS OVERRIDE KEY */}
+                    <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-extrabold text-amber-400">🔑 Modo Editor / Creador Detectado</p>
+                        <p className="text-[10px] text-slate-450">Como propietario del estudio de diagramación, puedes descargar y probar gratis.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeveloperUnlock(true);
+                          setBookPurchased(true);
+                          localStorage.setItem("developer_unlock_mode", "true");
+                          localStorage.setItem("payment_book_purchased", "true");
+                          triggerStudioToast("Acceso Editor Concedido: Descarga iniciada de " + pendingExportLabel, "success");
+                          setShowPaymentModal(false);
+                          if (pendingExport) {
+                            setTimeout(() => {
+                              pendingExport();
+                            }, 300);
+                          }
+                        }}
+                        className="bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10.5px] font-extrabold px-3 py-1.5 rounded-lg cursor-pointer transition-all shrink-0 active:scale-95"
+                      >
+                        Desbloquear Gratis
+                      </button>
                     </div>
 
                     {/* Método de pago dinámico según configuración del autor */}
