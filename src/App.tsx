@@ -4005,8 +4005,8 @@ export default function App() {
          break-after: page !important;
          break-inside: avoid !important;
          float: none !important;
-         background: #ffffff !important; /* Force clean white background for real print! */
-         color: #000000 !important;      /* Force black text for high-contrast print! */
+         background: ${pageBg} !important; /* Preserves page color (cream/sepia/white) */
+         color: ${pageText} !important;      /* Preserves page text color */
          overflow: hidden !important;
          -webkit-column-break-inside: avoid;
          break-inside: avoid-page;
@@ -4178,6 +4178,80 @@ export default function App() {
   </style>
 </head>
 <body>
+    <script>
+      function toggleGuides(show) {
+        const trims = document.querySelectorAll('.trim-box');
+        const safes = document.querySelectorAll('.safe-margin-box');
+        const svgs = document.querySelectorAll('.prepress-overlay-svg');
+        trims.forEach(el => el.style.borderStyle = show ? 'dashed' : 'none');
+        safes.forEach(el => el.style.borderStyle = show ? 'dotted' : 'none');
+        svgs.forEach(el => {
+          const crosshairs = el.querySelectorAll('g');
+          crosshairs.forEach(ch => ch.style.display = show ? 'block' : 'none');
+        });
+      }
+    </script>
+  </style>
+</head>
+<body>
+  <!-- CONTROL DE PREPRENSA (VISIBLE SOLO EN PANTALLA) -->
+  <div class="no-print" style="background: #0f172a; color: #f8fafc; font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; padding: 24px 30px; border-bottom: 3px solid #f59e0b; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <h1 style="margin: 0; font-size: 15pt; font-weight: 800; color: #f59e0b; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px;">
+          <span>📐 DIAGRAMMERS Studio — Centro de Comprobación de Pre-Prensa</span>
+          <span style="font-size: 8pt; background: #eab308; color: #000; padding: 2px 7px; font-weight:900; border-radius: 4px; font-family: monospace;">IMPRESIÓN DIGITAL</span>
+        </h1>
+        <p style="margin: 4px 0 0 0; font-size: 9.5pt; color: #94a3b8; font-family: system-ui, sans-serif;">
+          Salida física de alta fidelidad, con márgenes y cajas con sangrado (bleed) idénticas a los moldes profesionales de Adobe InDesign.
+        </p>
+      </div>
+      <div>
+        <button onclick="window.print()" style="background: #eab308; hover:background: #ca8a04; color: #0f172a; border: none; padding: 11px 24px; font-size: 10pt; font-weight: 800; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(234,179,8,0.2);">
+          🖨️ Abrir Diálogo de Impresión (Guardar PDF)
+        </button>
+      </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; border-top: 1px solid #1e293b; padding-top: 16px;">
+      <div style="background: #1e293b; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
+        <h3 style="margin: 0 0 8px 0; font-size: 9.5pt; color: #f59e0b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">⚙️ Configuración Obligatoria para Impresión Perfecta</h3>
+        <ul style="margin: 0; padding-left: 18px; font-size: 8.5pt; line-height: 1.6; color: #cbd5e1; font-family: system-ui, sans-serif;">
+          <li>Destino: <strong style="color: #fff;">Guardar como PDF</strong> (Save as PDF).</li>
+          <li>Márgenes: <strong style="color: #fff; text-decoration: underline;">NINGUNO (None)</strong>. <span style="color: #ef4444;">*Crucial para que las marcas de corte no se desplacen</span>.</li>
+          <li>Escala: <strong style="color: #fff;">Personalizada al 100%</strong> o <strong>Predeterminada</strong>. <span style="color: #ef4444;">*Evita "Ajustar al área de impresión"</span>.</li>
+          <li>Gráficos de fondo: <strong style="color: #fff; text-decoration: underline;">ACTIVADOR (Habilitar)</strong> para conservar el color de papel y las elegantes capitulares.</li>
+        </ul>
+      </div>
+
+      <div style="background: #1e293b; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+        <h3 style="margin: 0 0 8px 0; font-size: 9.5pt; color: #10b981; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">📐 Especificaciones de Maquetación de Pliego</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 8.5pt; color: #cbd5e1; font-family: monospace;">
+          <div>Corte Libro (Trim): <strong style="color: #f1f5f9;">${widthMm} x ${heightMm} mm</strong></div>
+          <div>Sangría (Bleed): <strong style="color: #f1f5f9;">${bleed} mm</strong></div>
+          <div>Margen Seguro: <strong style="color: #f1f5f9;">${safe} mm / lado</strong></div>
+          <div>Media Resultante: <strong style="color: #10b981; font-weight: bold;">${label}</strong></div>
+          <div>Ancho de Placa: <strong style="color: #f1f5f9;">${totalWidth} mm</strong></div>
+          <div>Alto de Placa: <strong style="color: #f1f5f9;">${totalHeight} mm</strong></div>
+          <div>Páginas Totales: <strong style="color: #f1f5f9;">${pages.length} págs.</strong></div>
+          <div>Compaginación: <strong style="color: #f1f5f9;">Simétrica (InDesign-Ready)</strong></div>
+        </div>
+      </div>
+
+      <div style="background: #1e293b; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+        <h3 style="margin: 0 0 8px 0; font-size: 9.5pt; color: #60a5fa; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">👁️ Guías Interactivas de Imprenta</h3>
+        <p style="margin: 0 0 10px 0; font-size: 8.5pt; color: #cbd5e1; line-height: 1.5; font-family: system-ui, sans-serif;">
+          Las marcas discontinuas indican la línea de guillotina física. En pantalla puedes ocultarlas o mostrarlas para verificar el encuadre perfecto.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 6px; font-size: 9pt; font-family: system-ui, sans-serif; color: #cbd5e1;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="chkGuides" checked onchange="toggleGuides(this.checked)" style="width: 14px; height: 14px;" />
+            <span>Mostrar Guías de Corte y Registro</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
     `;
 
       // Loop dynamically generated book pages
