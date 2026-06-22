@@ -2639,72 +2639,78 @@ export function LandingPage({
           </div>
         </section>
 
-        {/* 7-DAY FREE TRIAL PROGRAM FOR SMALL PUBLISHERS AND INVESTOR SHOWCASE */}
+        {/* ELITE COACHING PROGRAM & COMPREHENSIVE PUBLISHING VALUE PACK */}
         <section id="demo-7-dias" className="space-y-8 animate-fadeIn">
           <div className="text-center max-w-3xl mx-auto space-y-3">
-            <span className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3.5 py-1.5 rounded-full text-xs font-semibold text-amber-400 font-mono tracking-wider">
+            <span className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3.5 py-1.5 rounded-full text-xs font-semibold text-amber-400 font-mono tracking-wider animate-pulse">
               <Calendar className="w-3.5 h-3.5 shrink-0" />
-              PILOTO GRATUITO DE PROCESO COMPLETO (SaaS B2B PLG)
+              TALLER DE COACHING DIRECTO & ACCESO PERPETUO A DIAGRAMMERS
             </span>
             <h3 className="text-2xl md:text-4xl font-black tracking-tight text-white" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
-              Programa Demo de 7 Días para Pequeñas Editoriales
+              El Paquete Completo Para el Autor de Éxito
             </h3>
             <p className="text-xs sm:text-sm text-slate-350 leading-relaxed">
-              Permite a los editores independientes importar un manuscrito real en borrador, resolver toda la compaginación y descargar el PDF de pliego final listo para Amazon KDP. El 100% de la funcionalidad activa antes de comprar.
+              No estás simplemente contratando un maquetador. Te unes a un programa de mentoría estratégica corporativa donde aprenderás a publicar con calidad editorial de Nueva York y cobrarás tus regalías en todo el mundo sin intermediarios.
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
             
-            {/* Timeline Column (7 Days Journey) */}
+            {/* Timeline Column (Coaching Pillars) */}
             <div className="lg:col-span-7 bg-slate-900/60 border border-slate-800/80 p-5 md:p-7 rounded-3xl space-y-6 flex flex-col justify-between">
               <div>
                 <h4 className="text-sm font-bold text-slate-200 uppercase tracking-widest font-mono border-b border-slate-800 pb-3 flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
-                  Garantía del Proceso: De Cero a Libro Listo en 7 Días
+                  PILARES DEL TALLER: TU RUTA COMPLETA DE PUBLICACIÓN
                 </h4>
                 
                 <div className="mt-6 space-y-4 relative pl-4 border-l border-slate-800">
                   <div className="space-y-1 relative">
                     <div className="absolute -left-[22px] top-1 w-3.5 h-3.5 rounded-full bg-amber-500 border border-slate-950 flex items-center justify-center text-[8px] text-slate-950 font-bold">1</div>
-                    <h5 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Días 1 - 2: Ingesta del Manuscrito y Dictado de Voz</h5>
+                    <h5 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                      <span>Compaginación Profesional (DIAGRAMMERS Studio)</span>
+                    </h5>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      Carga tu borrador copiado/pegado o graba pasajes literarios complejos usando el dictado por voz integrado de alta fiabilidad. La IA segmentará y ordenará los capítulos automáticamente.
+                      Aprende a maquetar tus libros con calidad premium de Adobe InDesign. Controla huérfanas, viudas, sangrías y tipografías en minutos sin pagar tarifas abusivas por página. <strong>El acceso perpetuo al Studio está incluido con tu matrícula.</strong>
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 relative">
+                    <div className="absolute -left-[22px] top-1 w-3.5 h-3.5 rounded-full bg-amber-500 border border-slate-950 flex items-center justify-center text-[8px] text-slate-950 font-bold">2</div>
+                    <h5 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                      <span>Registro Oficial de Derechos (Safe Creative)</span>
+                    </h5>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      Te guiamos paso a paso para proteger tu propiedad intelectual de forma legal e internacional mediante Safe Creative. Asegura la autoría de tu obra antes de enviarla a imprenta o tiendas digitales.
                     </p>
                   </div>
 
                   <div className="space-y-1 relative">
                     <div className="absolute -left-[22px] top-1 w-3.5 h-3.5 rounded-full bg-amber-500 border border-slate-950 flex items-center justify-center text-[8px] text-slate-950 font-bold">3</div>
-                    <h5 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Días 3 - 4: Optimización Estética Google Gemini</h5>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                      El motor analiza el género literario para proveer emparejamientos tipográficos perfectos con previsualizaciones y márgenes de imprenta exactos en segundos.
-                    </p>
-                  </div>
-
-                  <div className="space-y-1 relative">
-                    <div className="absolute -left-[22px] top-1 w-3.5 h-3.5 rounded-full bg-amber-500 border border-slate-950 flex items-center justify-center text-[8px] text-slate-950 font-bold">5</div>
-                    <h5 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Días 5 - 6: Ajustes de Pliego Fino y Páginas</h5>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                      Explora la visión interactiva de página doble (view mode real). Edita huérfanas, viudas, ajusta sangrías y genera el Índice General dinámico de forma interactiva.
-                    </p>
-                  </div>
-
-                  <div className="space-y-1 relative">
-                    <div className="absolute -left-[22px] top-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border border-slate-950 flex items-center justify-center text-[8px] text-slate-950 font-bold">7</div>
-                    <h5 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <span>Día 7: Exportación de Maestros para KDP</span>
+                    <h5 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                      <span>Cuenta Bancaria en USA (Vía Payoneer Affiliate Link)</span>
                     </h5>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      Descarga tu PDF definitivo optimizado a 300 DPI y con tipografías subseteadas incrustadas. Cumple al 100% las normativas de plegado físico de Amazon o IngramSpark.
+                      ¡La bomba para autores fuera de EE.UU.! Para recibir tus regalías de Amazon necesitas una cuenta bancaria estadounidense. Te brindamos asesoría técnica de apertura y te compartimos nuestro enlace de afiliado preferencial de Payoneer para una aprobación rápida y bonificada.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 relative">
+                    <div className="absolute -left-[22px] top-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border border-slate-950 flex items-center justify-center text-[8px] text-slate-950 font-bold">4</div>
+                    <h5 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>Subida Exitosa a Amazon KDP</span>
+                    </h5>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      Acompañamiento VIP garantizado para que subas tu PDF y portada a Amazon sin errores de márgenes o sangrías. Evita los frustrantes rechazos del formateador de Amazon con nuestro método infalible.
                     </p>
                   </div>
                 </div>
               </div>
 
               <div className="bg-slate-950 border border-slate-850 p-3.5 rounded-xl flex items-center gap-3 mt-4">
-                <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+                <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0" />
                 <p className="text-[10.5px] text-slate-400 leading-normal">
-                  <strong className="text-slate-200 block">Compromiso Sin Tarjeta de Crédito:</strong> Nos enfocamos en el valor del producto (Product-Led Growth). Las pequeñas editoriales compran cuando ven impresas las páginas de prueba reales.
+                  <strong className="text-slate-200 block">Acceso Total al Adquirir el Curso:</strong> Al matricularte en nuestro coaching premium de compaginación, recibes tu <strong>Clave de Acceso privada</strong> para desbloquear DIAGRAMMERS para siempre.
                 </p>
               </div>
             </div>
@@ -2712,16 +2718,16 @@ export function LandingPage({
             {/* Live Interactive ROI Calculator column */}
             <div className="lg:col-span-5 bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800/90 p-5 md:p-7 rounded-3xl flex flex-col justify-between">
               <div className="space-y-4">
-                <span className="text-[9px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded tracking-wider uppercase block w-max">
-                  Calculadora Interactiva de Ahorro
+                <span className="text-[9px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded tracking-wider uppercase block w-max animate-pulse">
+                  CALCULADORA DE INVERSIÓN VS AHORRO
                 </span>
                 
                 <h4 className="text-base font-bold text-white tracking-tight" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
-                  ¿Cuánto Ahorra la Editorial en su Demo?
+                  Ahorra Miles de Dólares por Cada Obra
                 </h4>
                 
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Arrastra el selector con tu dedo o cursor para indicar la longitud de tu manuscrito borrador y calcular el coste del piloto gratuito:
+                  Arrastra el selector para indicar el número de páginas de tu libro y compara el costo de contratar a un maquetador profesional vs. inscribirte en el coaching con acceso ilimitado:
                 </p>
 
                 {/* SLIDER WIDGET TÁCTIL MOVIL */}
@@ -2744,9 +2750,9 @@ export function LandingPage({
                   />
                   
                   <div className="flex justify-between text-[9px] text-slate-500 font-mono">
-                    <span>50 pág. (Poesía)</span>
+                    <span>50 pág. (Poemario)</span>
                     <span>250 pág. (Novela estándar)</span>
-                    <span>500 pág. (Monografía)</span>
+                    <span>500 pág. (Biografía)</span>
                   </div>
                 </div>
 
@@ -2754,8 +2760,8 @@ export function LandingPage({
                 <div className="space-y-3 pt-1">
                   <div className="flex items-center justify-between text-xs border-b border-slate-900 pb-2">
                     <div className="flex flex-col">
-                      <span className="text-slate-400 font-medium">Diseño Tradicional (InDesign):</span>
-                      <span className="text-[10px] text-slate-500 font-mono">US$2.20 por página + demoras</span>
+                      <span className="text-slate-400 font-medium">Maquetador Gráfico de Oficio:</span>
+                      <span className="text-[10px] text-slate-500 font-mono">Promedio de US$2.20 / página cobrado</span>
                     </div>
                     <span className="font-mono text-red-400 font-bold">
                       US${(trialBookPages * 2.2).toLocaleString(undefined, {maximumFractionDigits: 0})}
@@ -2764,21 +2770,21 @@ export function LandingPage({
 
                   <div className="flex items-center justify-between text-xs border-b border-slate-900 pb-2">
                     <div className="flex flex-col">
-                      <span className="text-slate-400 font-medium">Licencia de Demo (7 Días):</span>
-                      <span className="text-[10px] text-slate-500 font-mono">Prueba completa sin límites</span>
+                      <span className="text-amber-400 font-extrabold">Coaching Élite + DIAGRAMMERS Studio:</span>
+                      <span className="text-[10.5px] text-slate-500 font-mono font-bold text-amber-400/90">Acceso Ilimitado Perpetuo Incluido</span>
                     </div>
-                    <span className="font-mono text-emerald-400 font-extrabold">
-                      US$0.00 <span className="text-[9px] font-normal">GRATIS</span>
+                    <span className="font-mono text-emerald-400 font-extrabold text-[13px]">
+                      US$197 <span className="text-[9px] font-normal uppercase">Pago Único</span>
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between text-xs border-b border-slate-900 pb-2">
                     <div className="flex flex-col">
-                      <span className="text-slate-400 font-medium">Plazo de Entrega e Impresiones:</span>
-                      <span className="text-[10px] text-slate-500 font-mono">Iteración veloz asistida por IA</span>
+                      <span className="text-slate-400 font-medium">Asesorías Premium Agregadas:</span>
+                      <span className="text-[10px] text-slate-500 font-mono">Amazon + SafeCreative + Cuenta de USA</span>
                     </div>
-                    <span className="text-[11px] text-slate-300">
-                      Inmediato <span className="text-[9.5px] line-through text-slate-500">vs 3 semanas</span>
+                    <span className="text-emerald-400 font-bold text-xs uppercase">
+                      INCLUIDO gratis
                     </span>
                   </div>
                 </div>
@@ -2786,12 +2792,12 @@ export function LandingPage({
 
               {/* SAVINGS HIGHLIGHT BENTO BLOCK */}
               <div className="mt-5 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl space-y-1 text-center">
-                <span className="text-[10px] text-emerald-400 uppercase tracking-widest font-bold block">Ahorro Neto Realizado</span>
+                <span className="text-[10px] text-emerald-400 uppercase tracking-widest font-bold block">Tu Ahorro Neto en este Libro</span>
                 <span className="text-2xl font-black text-white font-mono tracking-tight block">
-                  US${(trialBookPages * 2.2).toLocaleString(undefined, {maximumFractionDigits: 0})}
+                  US${Math.max(0, (trialBookPages * 2.2) - 197).toLocaleString(undefined, {maximumFractionDigits: 0})}
                 </span>
                 <p className="text-[10px] text-slate-350 italic">
-                  Tu obra finalizada lista para ir a imprenta y a tiendas sin costo inicial.
+                  Y maquetas de forma ilimitada todos tus próximos libros sin volver a pagar un solo centavo.
                 </p>
               </div>
 
@@ -2801,9 +2807,9 @@ export function LandingPage({
                     setAuthTab("register");
                     setShowLoginModal(true);
                   }}
-                  className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-3 rounded-xl shadow-lg shadow-amber-500/10 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-3 rounded-xl shadow-lg shadow-amber-500/10 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-100"
                 >
-                  <span>Crear Cuenta de Alumno</span>
+                  <span>Matricularme al Curso</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
@@ -2812,7 +2818,7 @@ export function LandingPage({
                   className="w-full bg-slate-900 hover:bg-slate-850 text-slate-300 font-semibold text-xs py-3 rounded-xl border border-slate-800 hover:border-slate-750 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Lock className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Simulador Paywall GPay</span>
+                  <span>Simulador de Licencias</span>
                 </button>
               </div>
             </div>
