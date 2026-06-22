@@ -42,7 +42,8 @@ import {
   Instagram,
   Facebook,
   Linkedin,
-  Share2
+  Share2,
+  Mail
 } from "lucide-react";
 import { motion } from "motion/react";
 import { LOCALES, SupportedLanguages } from "../locales";
@@ -68,10 +69,20 @@ export function LandingPage({
   const t = LOCALES[language || "es"] || LOCALES.es;
   // --- LOGIN MODAL & WORKSPACE SIMULATION STATES ---
   const [showLoginModal, setShowLoginModal] = useState(false);
+  
+  // Custom auth states for secure coaching portal
+  const [authTab, setAuthTab] = useState<"login" | "register">("login");
   const [loginEmail, setLoginEmail] = useState("marketingandcoach@gmail.com");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regName, setRegName] = useState("");
+  const [regWorkspace, setRegWorkspace] = useState("Autor Élite Premium Direct");
+  const [regPassword, setRegPassword] = useState("");
+  const [invitationCode, setInvitationCode] = useState("");
+  const [authErrorMessage, setAuthErrorMessage] = useState("");
+
   const [loginName, setLoginName] = useState("Socia de Élite");
   const [loginWorkspace, setLoginWorkspace] = useState("Sindicato de Editores Independientes");
-  const [loginPassword, setLoginPassword] = useState("••••••••");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginStatus, setLoginStatus] = useState<"idle" | "verifying" | "success">("idle");
 
@@ -3694,91 +3705,313 @@ export function LandingPage({
                 </div>
               </div>
             ) : (
-              <form 
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setLoginStatus("verifying");
-                  setTimeout(() => {
-                    setLoginStatus("success");
-                    setTimeout(() => {
-                      setShowLoginModal(false);
-                      onNavigateToStudio({ 
-                        email: loginEmail, 
-                        name: loginName, 
-                        workspace: loginWorkspace 
-                      });
-                      setLoginStatus("idle");
-                    }, 1000);
-                  }, 1500);
-                }} 
-                className="space-y-4 text-left"
-              >
-                {/* Email (Prefilled) */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Correo de Empresa:</label>
-                  <input
-                    type="email"
-                    required
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    className="w-full text-xs bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none focus:border-amber-500/80 transition-all font-mono"
-                    placeholder="correo@editorial.com"
-                  />
-                </div>
-
-                {/* Name */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Nombre de Usuario / Firma:</label>
-                  <input
-                    type="text"
-                    required
-                    value={loginName}
-                    onChange={(e) => setLoginName(e.target.value)}
-                    className="w-full text-xs bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none focus:border-amber-500/80 transition-all font-mono"
-                    placeholder="Tu nombre"
-                  />
-                </div>
-
-                {/* Suite Workspace Preset selection */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Workspace Suite Asignado:</label>
-                  <select
-                    value={loginWorkspace}
-                    onChange={(e) => setLoginWorkspace(e.target.value)}
-                    className="w-full text-[11.5px] bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none focus:border-amber-500 cursor-pointer"
-                  >
-                    <option value="Sindicato de Editores Independientes">Sindicato de Editores Independientes (Madrid)</option>
-                    <option value="Editorial Minerva Press">Editorial Minerva Press (Latam Hub)</option>
-                    <option value="Barcelona Book Group B2B">Barcelona Book Group B2B</option>
-                    <option value="Autor Élite Premium Direct">Autor Élite Premium Direct</option>
-                  </select>
-                </div>
-
-                {/* Password Mock */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Clave de Acceso:</label>
-                  <input
-                    type="password"
-                    required
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    className="w-full text-xs bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none focus:border-amber-500/80 transition-all font-mono"
-                  />
-                </div>
-
-                <div className="pt-2">
+              <div className="space-y-4 text-left">
+                {/* Auth Tab Picker */}
+                <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-xl border border-slate-850">
                   <button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold py-3.5 rounded-xl text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-100"
+                    onClick={() => {
+                      setAuthTab("login");
+                      setAuthErrorMessage("");
+                    }}
+                    className={`py-2 px-3 text-xs font-mono font-bold rounded-lg transition-all cursor-pointer ${
+                      authTab === "login"
+                        ? "bg-amber-500 text-slate-950"
+                        : "text-slate-400 hover:text-white hover:bg-slate-900"
+                    }`}
                   >
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Conectar y Cargar Suite</span>
+                    Ingresar (Alumnos)
                   </button>
-                  <span className="text-[8px] font-mono text-slate-500 block text-center mt-2 uppercase tracking-wider">
-                    Powered by Firebase Auth & Google Workspace OAuth
-                  </span>
+                  <button
+                    onClick={() => {
+                      setAuthTab("register");
+                      setAuthErrorMessage("");
+                    }}
+                    className={`py-2 px-3 text-xs font-mono font-bold rounded-lg transition-all cursor-pointer ${
+                      authTab === "register"
+                        ? "bg-amber-500 text-slate-950"
+                        : "text-slate-400 hover:text-white hover:bg-slate-900"
+                    }`}
+                  >
+                    Crear Cuenta de Alumno
+                  </button>
                 </div>
-              </form>
+
+                {authErrorMessage && (
+                  <div className="bg-rose-500/10 border border-rose-500/20 text-rose-300 p-3 rounded-xl text-[11px] leading-relaxed font-mono">
+                    ⚠️ {authErrorMessage}
+                  </div>
+                )}
+
+                {authTab === "login" ? (
+                  /* --- CUSTOM LOGIN FORM --- */
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      setAuthErrorMessage("");
+
+                      // Fetch registered accounts or check Admin fallback
+                      let usersList = [];
+                      try {
+                        const savedList = localStorage.getItem("diagrammers_registered_users");
+                        if (savedList) {
+                          usersList = JSON.parse(savedList);
+                        }
+                      } catch (err) {}
+
+                      // Admin fallback check
+                      const isAdmin = loginEmail.toLowerCase().trim() === "marketingandcoach@gmail.com";
+                      const matchedUser = usersList.find(
+                        (u: any) => u.email.toLowerCase().trim() === loginEmail.toLowerCase().trim()
+                      );
+
+                      if (isAdmin || matchedUser) {
+                        // If administering, allow demo credentials or validated custom password
+                        if (isAdmin && (loginPassword === "admin" || loginPassword === "" || loginPassword === "••••••••")) {
+                          // Admin bypass
+                          setLoginName("Coach Autorizado");
+                          setLoginWorkspace("Suite de Administración Coach");
+                          setLoginStatus("verifying");
+                          setTimeout(() => {
+                            setLoginStatus("success");
+                            setTimeout(() => {
+                              setShowLoginModal(false);
+                              onNavigateToStudio({
+                                email: "marketingandcoach@gmail.com",
+                                name: "Coach Autorizado",
+                                workspace: "Suite de Administración Coach"
+                              });
+                              setLoginStatus("idle");
+                            }, 1000);
+                          }, 1200);
+                        } else if (matchedUser && matchedUser.password === loginPassword) {
+                          // Validated student login
+                          setLoginName(matchedUser.name);
+                          setLoginWorkspace(matchedUser.workspace);
+                          setLoginStatus("verifying");
+                          setTimeout(() => {
+                            setLoginStatus("success");
+                            setTimeout(() => {
+                              setShowLoginModal(false);
+                              onNavigateToStudio({
+                                email: matchedUser.email,
+                                name: matchedUser.name,
+                                workspace: matchedUser.workspace
+                              });
+                              setLoginStatus("idle");
+                            }, 1000);
+                          }, 1200);
+                        } else {
+                          setAuthErrorMessage("La contraseña ingresada es incorrecta.");
+                        }
+                      } else {
+                        setAuthErrorMessage("Este correo no se encuentra registrado. Si eres nuevo, ve a la pestaña 'Crear Cuenta de Alumno' para registrarte.");
+                      }
+                    }}
+                    className="space-y-4"
+                  >
+                    {/* Login Email */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Correo de Alumno:</label>
+                      <input
+                        type="email"
+                        required
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        className="w-full text-xs bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none focus:border-amber-500/80 transition-all font-mono"
+                        placeholder="correo@ejemplo.com"
+                      />
+                    </div>
+
+                    {/* Login Password */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Contraseña Personal:</label>
+                      <input
+                        type="password"
+                        required
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        className="w-full text-xs bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none focus:border-amber-500/80 transition-all font-mono"
+                        placeholder="Tu contraseña secreta"
+                      />
+                      <span className="text-[9px] text-slate-500 block font-mono">
+                        * Si estás evaluando el sitio, usa: <strong className="text-amber-400/80">marketingandcoach@gmail.com</strong> con clave provisional vacía o <strong className="text-amber-400/80">admin</strong>.
+                      </span>
+                    </div>
+
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold py-3.5 rounded-xl text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-100"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Verificar e Ingresar</span>
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  /* --- CUSTOM REGISTRATION FORM WITH INVITATION CHALLENGE --- */
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      setAuthErrorMessage("");
+
+                      const trimmedCode = invitationCode.toUpperCase().trim();
+                      const allowedCodes = ["COACHING2026", "DIAGRAMMERS2026", "ELITE2026", "DIAGRAMMERS-ELITE", "ALUMNO-ELITE"];
+
+                      if (!allowedCodes.includes(trimmedCode)) {
+                        setAuthErrorMessage("La Clave de Acceso de Coaching es incorrecta. Tu mentor te la proveerá al matricularte. Si aún no la tienes, solicítala abajo.");
+                        return;
+                      }
+
+                      // Fetch or init list
+                      let usersList = [];
+                      try {
+                        const savedList = localStorage.getItem("diagrammers_registered_users");
+                        if (savedList) {
+                          usersList = JSON.parse(savedList);
+                        }
+                      } catch (err) {}
+
+                      const emailExists = usersList.some(
+                        (u: any) => u.email.toLowerCase().trim() === regEmail.toLowerCase().trim()
+                      );
+
+                      if (emailExists) {
+                        setAuthErrorMessage("Esta dirección de correo ya tiene una cuenta registrada. Por favor ingresa en la pestaña 'Ingresar'.");
+                        return;
+                      }
+
+                      // Create and save new user profile
+                      const newUser = {
+                        email: regEmail.trim(),
+                        name: regName.trim(),
+                        workspace: regWorkspace,
+                        password: regPassword
+                      };
+
+                      usersList.push(newUser);
+                      localStorage.setItem("diagrammers_registered_users", JSON.stringify(usersList));
+
+                      // Login dynamically
+                      setLoginName(newUser.name);
+                      setLoginWorkspace(newUser.workspace);
+                      setLoginStatus("verifying");
+
+                      setTimeout(() => {
+                        setLoginStatus("success");
+                        setTimeout(() => {
+                          setShowLoginModal(false);
+                          onNavigateToStudio(newUser);
+                          setLoginStatus("idle");
+                        }, 1000);
+                      }, 1500);
+
+                    }}
+                    className="space-y-3.5"
+                  >
+                    {/* Reg Email */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Tu Correo Institucional:</label>
+                      <input
+                        type="email"
+                        required
+                        value={regEmail}
+                        onChange={(e) => setRegEmail(e.target.value)}
+                        className="w-full text-xs bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none focus:border-amber-500/80 transition-all font-mono"
+                        placeholder="tu-correo@ejemplo.com"
+                      />
+                    </div>
+
+                    {/* Reg Name */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Nombre del Alumno / Autor:</label>
+                      <input
+                        type="text"
+                        required
+                        value={regName}
+                        onChange={(e) => setRegName(e.target.value)}
+                        className="w-full text-xs bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none focus:border-amber-500/80 transition-all font-mono"
+                        placeholder="Nombre completo"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Workspace profile select */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Gremio / Perfil:</label>
+                        <select
+                          value={regWorkspace}
+                          onChange={(e) => setRegWorkspace(e.target.value)}
+                          className="w-full text-[11px] bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none focus:border-amber-500 cursor-pointer"
+                        >
+                          <option value="Autor Élite Premium Direct">Autor Élite Premium</option>
+                          <option value="Editorial Independiente Minerva">Editorial Independiente</option>
+                          <option value="Socio B2B Profesional">Socio B2B Preprensa</option>
+                        </select>
+                      </div>
+
+                      {/* Reg Password */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Contraseña Secreta:</label>
+                        <input
+                          type="password"
+                          required
+                          value={regPassword}
+                          onChange={(e) => setRegPassword(e.target.value)}
+                          className="w-full text-xs bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none focus:border-amber-500/80 transition-all font-mono"
+                          placeholder="Mínimo 4 caracteres"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Private access key challenge */}
+                    <div className="space-y-1 bg-amber-500/5 p-3 rounded-2xl border border-amber-500/10">
+                      <label className="text-[10px] uppercase font-extrabold text-amber-400 block font-mono flex items-center gap-1">
+                        <Key className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Clave de Acceso de Coaching:</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={invitationCode}
+                        onChange={(e) => setInvitationCode(e.target.value)}
+                        className="w-full text-xs bg-slate-950 border border-amber-500/30 rounded-xl p-3 text-white uppercase outline-none focus:border-amber-500 tracking-wider font-mono text-center font-bold"
+                        placeholder="INGRESA CLAVE DE TALLER"
+                      />
+                      <span className="text-[8px] text-slate-450 block font-mono leading-normal pt-1">
+                        * Clave pública de demostración: <strong className="text-amber-400/95 font-bold font-mono">ALUMNO-ELITE</strong> o <strong className="text-amber-400/95 font-bold font-mono">COACHING2026</strong>
+                      </span>
+                    </div>
+
+                    <div className="pt-1.5">
+                      <button
+                        type="submit"
+                        className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold py-3.5 rounded-xl text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-100"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Validar Clave y Registrarme</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* --- LEAD INQUIRY REDIRECT FOR PUBLIC VISITOR WITH PROFESSIONAL SUBJECT AND BODY TEMPLATE --- */}
+                <div className="pt-2 border-t border-slate-850">
+                  <div className="bg-slate-955 border border-slate-850 rounded-2xl p-4 text-center space-y-3">
+                    <p className="text-[10.5px] text-slate-450 leading-relaxed">
+                      ¿Aún no te has inscrito al coaching de compaginación y deseas recibir tu Clave de Acceso privada de DIAGRAMMERS para usar el suite?
+                    </p>
+                    <a
+                      href="mailto:marketingandcoach@gmail.com?subject=Solicitud de Coaching y Clave de Acceso DIAGRAMMERS&body=Hola Coach,%0D%0A%0D%0AHe estado revisando la Suite Editorial DIAGRAMMERS y me interesa muchísimo adquirir tu servicio de coaching estratégico corporativo para aprender a compaginar y maquetar mis obras editoriales con calidad Adobe InDesign.%0D%0A%0D%0APor favor, bríndame los detalles del programa de entrenamiento, precios de inscripción y mi Clave de Acceso exclusiva para registrarme en el sistema.%0D%0A%0D%0AMi Nombre Completo: %0D%0AMi Correo Institucional: %0D%0A¡Muchas gracias!"
+                      className="inline-flex items-center justify-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold px-4 py-3 rounded-xl text-xs transition-all border border-amber-500/20 w-full text-center shadow-lg"
+                      style={{ textDecoration: "none" }}
+                    >
+                      <Mail className="w-4 h-4" />
+                      <span>Solicitar Mi Clave (Coaching)</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>

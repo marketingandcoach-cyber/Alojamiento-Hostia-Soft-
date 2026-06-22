@@ -574,8 +574,30 @@ export default function App() {
 
   // UI Tabs for control sidebar
   const [activeTab, setActiveTab] = useState<"preset" | "manual" | "content" | "compatibility" | "copyright" | "pitch" | "multimedia" | "screenplay" | "guiautor">("guiautor");
-  const [viewMode, setViewMode] = useState<"landing" | "studio">("studio");
-  const [currentUser, setCurrentUser] = useState<{ email: string; name: string; workspace: string } | null>(null);
+  
+  // Persistent, Private Authentication Session
+  const [currentUser, setCurrentUser] = useState<{ email: string; name: string; workspace: string } | null>(() => {
+    if (typeof window !== "undefined") {
+      const savedUser = localStorage.getItem("diagrammers_user");
+      if (savedUser) {
+        try {
+          return JSON.parse(savedUser);
+        } catch (e) {
+          return null;
+        }
+      }
+    }
+    return null;
+  });
+
+  const [viewMode, setViewMode] = useState<"landing" | "studio">(() => {
+    if (typeof window !== "undefined") {
+      const savedUser = localStorage.getItem("diagrammers_user");
+      return savedUser ? "studio" : "landing";
+    }
+    return "landing";
+  });
+
   const [showDriveModal, setShowDriveModal] = useState<boolean>(false);
   const [driveImportingStatus, setDriveImportingStatus] = useState<"idle" | "connecting" | "downloading" | "analyzing" | "formatting" | "success">("idle");
   const [selectedDriveFile, setSelectedDriveFile] = useState<string | null>(null);
@@ -5777,6 +5799,9 @@ ${generatedScreenplayText}
           }
           if (user) {
             setCurrentUser(user);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("diagrammers_user", JSON.stringify(user));
+            }
           }
           setViewMode("studio");
         }}
@@ -6025,8 +6050,12 @@ ${generatedScreenplayText}
 
             <button
               onClick={() => {
+                if (typeof window !== "undefined") {
+                  localStorage.removeItem("diagrammers_user");
+                }
                 setCurrentUser(null);
                 setMetadata(prev => ({ ...prev, publisher: "" }));
+                setViewMode("landing");
               }}
               className="text-slate-450 hover:text-red-400 font-mono transition-colors text-[10px] bg-slate-950 border border-slate-850 px-2.5 py-1.5 rounded-md cursor-pointer"
             >
