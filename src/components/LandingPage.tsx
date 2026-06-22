@@ -1080,7 +1080,10 @@ export function LandingPage({
           </button>
           
           <button
-            onClick={() => onNavigateToStudio()}
+            onClick={() => {
+              setAuthTab("login");
+              setShowLoginModal(true);
+            }}
             className="flex-1 md:flex-initial bg-gradient-to-r from-amber-500 to-amber-650 hover:from-amber-400 hover:to-amber-550 text-slate-950 font-extrabold px-4 py-2 rounded-xl text-[11px] sm:text-xs tracking-wide shadow-lg shadow-amber-500/10 transition-all hover:scale-[1.03] active:scale-100 flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <span>{t.enterStudio}</span>
@@ -2009,7 +2012,10 @@ export function LandingPage({
 
           <div className="pt-6 flex flex-wrap justify-center gap-4">
             <button
-              onClick={() => onNavigateToStudio && onNavigateToStudio()}
+              onClick={() => {
+                setAuthTab("login");
+                setShowLoginModal(true);
+              }}
               className="bg-gradient-to-r from-cyan-500 via-fuchsia-600 to-orange-500 hover:from-cyan-400 hover:via-fuchsia-500 hover:to-orange-400 text-white font-extrabold px-8 py-4 rounded-2xl text-sm sm:text-base tracking-wide shadow-xl shadow-cyan-500/20 shadow-fuchsia-500/10 transition-all hover:scale-105 hover:-translate-y-0.5 active:scale-100 flex items-center gap-3 cursor-pointer"
             >
               <span>{t.liveSoftware}</span>
@@ -2791,10 +2797,13 @@ export function LandingPage({
 
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
-                  onClick={() => onNavigateToStudio()}
+                  onClick={() => {
+                    setAuthTab("register");
+                    setShowLoginModal(true);
+                  }}
                   className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-3 rounded-xl shadow-lg shadow-amber-500/10 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>Iniciar Prueba Gratis</span>
+                  <span>Crear Cuenta de Alumno</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
