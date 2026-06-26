@@ -50,6 +50,7 @@ import { LOCALES, SupportedLanguages } from "../locales";
 import { DiagrammersLogo, DiagrammersFullLogo } from "./DiagrammersLogo";
 import { HostiaSoftLogo, HostiaSoftFullLogo } from "./HostiaSoftLogo";
 import { MultiPublisher } from "./MultiPublisher";
+import { BlogSection } from "./BlogSection";
 
 interface LandingPageProps {
   onNavigateToStudio: (userProfile?: { email: string; name: string; workspace: string }) => void;
@@ -72,7 +73,7 @@ export function LandingPage({
   
   // Custom auth states for secure coaching portal
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
-  const [loginEmail, setLoginEmail] = useState("marketingandcoach@gmail.com");
+  const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [regEmail, setRegEmail] = useState("");
   const [regName, setRegName] = useState("");
@@ -126,7 +127,7 @@ export function LandingPage({
   };
 
   // --- UNIFIED AITRANSVOICE AI VOICE HUB STATES ---
-  const [hubTab, setHubTab] = useState<"hostiasoft" | "aitransvoice" | "diagrammers" | "multipublisher">("hostiasoft");
+  const [hubTab, setHubTab] = useState<"hostiasoft" | "aitransvoice" | "diagrammers" | "multipublisher" | "blog">("hostiasoft");
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [voiceTextSource, setVoiceTextSource] = useState<string>("Hola, bienvenido a la nueva plataforma AITRANSVOICE. Aquí puedes traducir cualquier texto y escucharlo sintetizado de inmediato con voces naturales.");
   const [voiceLanguageSource, setVoiceLanguageSource] = useState<string>("es");
@@ -971,18 +972,18 @@ export function LandingPage({
                   HOSTIA<span className="bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-400 bg-clip-text text-transparent ml-0.5 font-bold">SOFT</span>
                   <span className="text-slate-800 text-xs mx-1">|</span>
                   <span className="text-[10px] sm:text-xs text-slate-300 font-bold tracking-normal font-sans pt-0.5">
-                    {hubTab === "hostiasoft" ? "Ecosistema" : hubTab === "aitransvoice" ? "AITRANSVOICE" : hubTab === "multipublisher" ? "MULTIPUBLISHER" : "DIAGRAMMERS"}
+                    {hubTab === "hostiasoft" ? "Ecosistema" : hubTab === "aitransvoice" ? "AITRANSVOICE" : hubTab === "multipublisher" ? "MULTIPUBLISHER" : hubTab === "blog" ? "BLOG EDITORIAL" : "DIAGRAMMERS"}
                   </span>
                 </h1>
                 <p className="text-[9px] text-slate-400 font-mono">
-                  {hubTab === "hostiasoft" ? "Plataforma de Softwares Democráticos" : hubTab === "aitransvoice" ? "Ecosistema de Voz e Idioma" : hubTab === "multipublisher" ? "Multiplicador Orgánico Anti-Spam" : "Suite de Maquetación Editorial KDP"}
+                  {hubTab === "hostiasoft" ? "Plataforma de Softwares Democráticos" : hubTab === "aitransvoice" ? "Ecosistema de Voz e Idioma" : hubTab === "multipublisher" ? "Multiplicador Orgánico Anti-Spam" : hubTab === "blog" ? "Estrategias de Diseño y Publicación KDP" : "Suite de Maquetación Editorial KDP"}
                 </p>
               </div>
             </button>
           </div>
           
           <span className="md:hidden text-[9px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded font-mono font-bold">
-            {hubTab === "hostiasoft" ? "ECO" : hubTab === "aitransvoice" ? "AITV SUITE" : hubTab === "multipublisher" ? "MUTIPUB" : "KDP ACTIVE"}
+            {hubTab === "hostiasoft" ? "ECO" : hubTab === "aitransvoice" ? "AITV SUITE" : hubTab === "multipublisher" ? "MUTIPUB" : hubTab === "blog" ? "BLOG" : "KDP ACTIVE"}
           </span>
         </div>
 
@@ -1034,6 +1035,18 @@ export function LandingPage({
           >
             <Share2 className="w-3.5 h-3.5" />
             <span>MULTIPUBLISHER</span>
+          </button>
+
+          <button
+            onClick={() => setHubTab("blog")}
+            className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+              hubTab === "blog"
+                ? "bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 text-white shadow-md font-extrabold scale-102 font-bold"
+                : "text-slate-400 hover:text-white hover:bg-slate-900/40"
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5 text-purple-400" />
+            <span>BLOG</span>
           </button>
 
           {/* DYNAMIC FUTURE ADDITION BUTTON FOR MORE SOFTWARES */}
@@ -1978,6 +1991,11 @@ export function LandingPage({
               </div>
             </section>
           </div>
+        ) : hubTab === "blog" ? (
+          <BlogSection
+            language={language}
+            showToast={showToast}
+          />
         ) : hubTab === "multipublisher" ? (
           <MultiPublisher
             language={language}
@@ -3848,9 +3866,6 @@ export function LandingPage({
                         className="w-full text-xs bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none focus:border-amber-500/80 transition-all font-mono"
                         placeholder="Tu contraseña secreta"
                       />
-                      <span className="text-[9px] text-slate-500 block font-mono">
-                        * Si estás evaluando el sitio, usa: <strong className="text-amber-400/80">marketingandcoach@gmail.com</strong> con clave provisional vacía o <strong className="text-amber-400/80">admin</strong>.
-                      </span>
                     </div>
 
                     <div className="pt-2">
