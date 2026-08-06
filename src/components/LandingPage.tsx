@@ -48,9 +48,11 @@ import {
 import { motion } from "motion/react";
 import { LOCALES, SupportedLanguages } from "../locales";
 import { DiagrammersLogo, DiagrammersFullLogo } from "./DiagrammersLogo";
+import { AutoriaLogo, AutoriaFullLogo } from "./AutoriaLogo";
 import { HostiaSoftLogo, HostiaSoftFullLogo } from "./HostiaSoftLogo";
 import { MultiPublisher } from "./MultiPublisher";
 import { BlogSection } from "./BlogSection";
+import { WebinarSection } from "./WebinarSection";
 
 interface LandingPageProps {
   onNavigateToStudio: (userProfile?: { email: string; name: string; workspace: string }) => void;
@@ -128,6 +130,46 @@ export function LandingPage({
 
   // --- UNIFIED AITRANSVOICE AI VOICE HUB STATES ---
   const [hubTab, setHubTab] = useState<"hostiasoft" | "aitransvoice" | "diagrammers" | "multipublisher" | "blog">("hostiasoft");
+
+  // --- AUTORIA OPERATING SYSTEM HUB STATES ---
+  const [activeStep, setActiveStep] = useState<number>(1);
+  const [brainstormPrompt, setBrainstormPrompt] = useState<string>("Una novela de misterio ambientada en un pueblo pesquero de los Andes");
+  const [brainstormResult, setBrainstormResult] = useState<string>("");
+  const [isBrainstorming, setIsBrainstorming] = useState<boolean>(false);
+  const [rewriteText, setRewriteText] = useState<string>("A ti escritor que no has logrado subir tu libro a Amazon, yo también estuve allí hace un tiempo... Y por ello hoy quiero darte la solución con Diagrammers y Autoria.");
+  const [rewriteTone, setRewriteTone] = useState<string>("Persuasivo Comercial");
+  const [rewrittenText, setRewrittenText] = useState<string>("");
+  const [isRewritingTextState, setIsRewritingTextState] = useState<boolean>(false);
+  
+  // Cover Designer
+  const [activeCoverStyle, setActiveCoverStyle] = useState<string>("Minimalista Suizo");
+  const [coverTitle, setCoverTitle] = useState<string>("El Manuscrito Perdido");
+  const [coverAuthor, setCoverAuthor] = useState<string>("Carlos Mendoza");
+  const [isGeneratingCover, setIsGeneratingCover] = useState<boolean>(false);
+
+  // Translation step
+  const [stepTranslationLang, setStepTranslationLang] = useState<string>("en");
+  const [translatedStepResult, setTranslatedStepResult] = useState<string>("");
+  const [isTranslatingStep, setIsTranslatingStep] = useState<boolean>(false);
+
+  // AI Multiagents
+  const [selectedAgent, setSelectedAgent] = useState<string>("editor");
+  const [agentMessage, setAgentMessage] = useState<string>("");
+  const [agentChat, setAgentChat] = useState<Array<{ sender: "user" | "agent"; text: string }>>([
+    { sender: "agent", text: "Hola, soy tu Editor Profesional de Autoria AI. Puedo ayudarte a estructurar tus capítulos, perfeccionar el ritmo de tu narrativa o desarrollar tus personajes. ¿De qué trata tu libro?" }
+  ]);
+
+  // API & B2B Sandbox
+  const [selectedApiEndpoint, setSelectedApiEndpoint] = useState<string>("books/create");
+  const [apiRouteResult, setApiRouteResult] = useState<string>("");
+  const [isCallingApi, setIsCallingApi] = useState<boolean>(false);
+
+  // WhatsApp Assistant advisor
+  const [whatsappAssistantMessage, setWhatsappAssistantMessage] = useState<string>("");
+  const [whatsappAssistantChat, setWhatsappAssistantChat] = useState<Array<{ sender: "user" | "agent"; text: string }>>([
+    { sender: "agent", text: "¡Hola! Soy tu Consultor de Canales y Comunicación. Te asesoro para conseguir un número de WhatsApp virtual serio y profesional para tu negocio de autor. ¿Quieres comparar Hushed, Twilio o la API oficial de WhatsApp Business?" }
+  ]);
+
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [voiceTextSource, setVoiceTextSource] = useState<string>("Hola, bienvenido a la nueva plataforma AITRANSVOICE. Aquí puedes traducir cualquier texto y escucharlo sintetizado de inmediato con voces naturales.");
   const [voiceLanguageSource, setVoiceLanguageSource] = useState<string>("es");
@@ -359,7 +401,7 @@ export function LandingPage({
 
   const downloadSoftwareRegistrationDoc = () => {
     const currentDate = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" });
-    const userEmail = "marketingandcoach@gmail.com";
+    const userEmail = "soporte@autoria.ai";
     
     const docHtml = `
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
@@ -941,16 +983,30 @@ export function LandingPage({
   return (
     <div className="bg-slate-950 text-slate-100 min-h-screen relative overflow-hidden font-sans">
       
-      {/* BRAND PHILOSOPHY TOP ANNOUNCEMENT BAR */}
-      <div className="bg-gradient-to-r from-cyan-950/80 via-purple-950/80 to-amber-950/80 border-b border-slate-900 px-4 py-2 text-center relative z-50">
-        <p className="text-[10px] sm:text-xs font-semibold tracking-wider text-slate-200 animate-pulse flex items-center justify-center gap-2 flex-wrap">
-          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="font-extrabold uppercase tracking-widest text-cyan-400 text-[10px]">HOSTIA SOFT</span>
-          <span className="text-slate-700">•</span>
-          <span className="italic text-slate-200 font-medium">"Crea sin límites. Comparte sin fronteras."</span>
-          <span className="text-slate-705">•</span>
-          <span className="bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold">Partner: Google AI Studio 🤝</span>
-        </p>
+      {/* BRAND PHILOSOPHY & WEBINAR TOP ANNOUNCEMENT BAR */}
+      <div className="bg-gradient-to-r from-amber-950/90 via-slate-900 to-cyan-950/90 border-b border-amber-500/20 px-4 py-2 text-center relative z-50">
+        <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-slate-200 flex items-center justify-center gap-2 flex-wrap">
+          <span className="inline-flex items-center gap-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-mono text-[10px] font-bold">
+            🎙️ WEBINAR GRATUITO
+          </span>
+          <span className="font-extrabold text-white">De las páginas a tus oídos: Producción Profesional de Audiolibros</span>
+          <span className="text-slate-600">•</span>
+          <span className="text-amber-300 font-mono font-bold">📅 15 de Agosto, 4:00 PM</span>
+          <span className="text-slate-600">•</span>
+          <span className="text-purple-300 text-[11px]">Ruth García (MM Studio IA)</span>
+          <a
+            href="#webinar-audiolibros"
+            onClick={(e) => {
+              // Ensure we are on hostiasoft or aitransvoice tab or scroll down
+              if (hubTab !== "hostiasoft" && hubTab !== "aitransvoice") {
+                setHubTab("hostiasoft");
+              }
+            }}
+            className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-400 hover:text-amber-300 underline underline-offset-2 ml-1"
+          >
+            Ver Detalles y Reservar →
+          </a>
+        </div>
       </div>
 
       {/* BACKGROUND DECORATIVE CINEMATIC GLOW (AMBIENT LIGHTS) */}
@@ -1015,14 +1071,14 @@ export function LandingPage({
           
           <button
             onClick={() => setHubTab("diagrammers")}
-            className={`flex-1 md:flex-initial flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
               hubTab === "diagrammers"
-                ? "bg-amber-500 text-slate-950 shadow-md font-extrabold scale-102 font-bold"
+                ? "bg-gradient-to-r from-amber-500 via-rose-500 to-indigo-600 text-white shadow-md font-extrabold scale-102"
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            <Book className="w-3.5 h-3.5" />
-            <span>DIAGRAMMERS</span>
+            <Book className="w-3.5 h-3.5 text-amber-400" />
+            <span>DIAGRAMMERS / AUTORIA</span>
           </button>
 
           <button
@@ -1130,41 +1186,41 @@ export function LandingPage({
 
             {/* SELECTION GRID CONTAINER */}
             <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto pt-6">
-              {/* Product 1: DIAGRAMMERS */}
+              {/* Product 1: AUTORIA AI */}
               <div className="bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/40 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-amber-500/5 group relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/10 transition-colors"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-tr from-amber-500/5 to-rose-500/5 rounded-full blur-3xl pointer-events-none group-hover:from-amber-500/10 group-hover:to-rose-500/10 transition-all"></div>
                 
                 <div className="space-y-5">
                   <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/10 to-rose-500/10 flex items-center justify-center text-amber-400">
                       <Book className="w-6 h-6" />
                     </div>
-                    <span className="text-[10px] uppercase font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-full">
-                      Suite Editorial
+                    <span className="text-[10px] uppercase font-mono font-bold bg-gradient-to-r from-amber-500/15 to-rose-500/15 text-amber-300 border border-rose-500/20 px-2.5 py-1 rounded-full">
+                      SISTEMA OPERATIVO EDITORIAL
                     </span>
                   </div>
 
                   <div className="space-y-2">
                     <h3 className="text-xl sm:text-2xl font-black text-white group-hover:text-amber-400 transition-colors" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
-                      DIAGRAMMERS
+                      DIAGRAMMERS / AUTORIA AI
                     </h3>
                     <p className="text-xs text-slate-400 leading-relaxed">
-                      El estándar moderno para escritores independientes. Maqueta tus obras en formato digital e impreso en minutos, calcula pliegos precisos para Amazon KDP, y asegura tus derechos de autor legalmente.
+                      El primer Sistema Operativo Editorial del mundo (originalmente DIAGRAMMERS). Integra absolutamente todo el flujo: ideas, escritura asistida, corrección, maquetación suiza, traducción, audiolibros y analíticas de ventas.
                     </p>
                   </div>
 
                   <ul className="text-xs text-slate-350 space-y-2 pt-2">
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>Maquetador Suizo con pliego ortotipográfico</span>
+                      <Check className="w-4 h-4 text-rose-400 shrink-0" />
+                      <span>Ecosistema de 11 Pasos unificado con IA</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>ISBN de autor provisional y código de barras</span>
+                      <Check className="w-4 h-4 text-rose-400 shrink-0" />
+                      <span>IA Multiagente (Editor, Corrector, Diseñador...)</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>Páginas de créditos inteligentes & Safe Creative</span>
+                      <Check className="w-4 h-4 text-rose-400 shrink-0" />
+                      <span>Maquetador KDP profesional & Publicación Directa</span>
                     </li>
                   </ul>
                 </div>
@@ -1177,9 +1233,9 @@ export function LandingPage({
                       }
                       setHubTab("diagrammers");
                     }}
-                    className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3.5 px-5 rounded-2xl text-xs sm:text-sm tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-amber-500/10"
+                    className="w-full bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 hover:text-white font-black py-3.5 px-5 rounded-2xl text-xs sm:text-sm tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-amber-500/10"
                   >
-                    <span>Ingresar a Diagrammers</span>
+                    <span>Ingresar a DIAGRAMMERS / AUTORIA</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -1350,6 +1406,9 @@ export function LandingPage({
                 </div>
               </div>
             </section>
+
+            {/* WEBINAR AUDIOBOOKS SECTION */}
+            <WebinarSection onShowToast={showToast} />
           </div>
         ) : hubTab === "aitransvoice" ? (
           <div className="space-y-24 animate-fadeIn">
@@ -1397,6 +1456,9 @@ export function LandingPage({
                 <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500" /> Enlace de Soporte Securizado</span>
               </div>
             </section>
+
+            {/* WEBINAR AUDIOBOOKS SECTION */}
+            <WebinarSection onShowToast={showToast} />
 
             {/* INTERACTIVE TRANSLATOR AND SPEECH GENERATOR */}
             <section id="aitranslator-widget" className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 relative shadow-2xl space-y-6">
@@ -1673,7 +1735,7 @@ export function LandingPage({
                         <span className="text-xs font-mono font-bold text-indigo-400 uppercase tracking-widest block">Procesando Espectro Vocal</span>
                         <p className="text-[10px] text-slate-500 font-mono leading-relaxed">
                           Aislando armónicos y osciladores...<br />
-                          Modelo generado: <span className="text-emerald-400">ruthgmedina_cloned.raw</span>
+                          Modelo generado: <span className="text-emerald-400">voz_clonada_premium.raw</span>
                         </p>
                       </div>
                     </div>
@@ -1824,7 +1886,7 @@ export function LandingPage({
                           </div>
                           <div>
                             <p className="text-xs font-bold text-white uppercase tracking-wide">Audiolibro: El Despertar del Guerrero</p>
-                            <p className="text-[10px] text-slate-500 font-mono">Voz Clón: ruthgmedina_cloned.raw • 128 kbps</p>
+                            <p className="text-[10px] text-slate-500 font-mono">Voz Clón: voz_clonada_premium.raw • 128 kbps</p>
                           </div>
                         </div>
 
@@ -1930,7 +1992,7 @@ export function LandingPage({
               <div className="max-w-xl mx-auto space-y-3 font-sans">
                 <span className="text-[9px] font-bold text-indigo-400 tracking-[0.2em] font-mono uppercase block">Soporte y Sostenibilidad Independiente</span>
                 <h3 className="text-xl sm:text-2xl font-black text-white font-sans" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
-                  Proyecto de HOSTIA SOFT liderado por Ruth Medina
+                  Proyecto del Sindicato de Editores de HOSTIA SOFT
                 </h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   Tanto el maquetador suizo <strong>DIAGRAMMERS Studio</strong> como el optimizador de voces <strong>AITRANSVOICE</strong> no cobran tarifas de suscripción forzosas ni muestran banners intrusivos. Las descargas y pruebas de audio son posibles gracias al banco de aportes comunitarios libres.
@@ -1943,7 +2005,7 @@ export function LandingPage({
               {/* Tipping preset boxes */}
               <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
                 <a
-                  href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=ruthgmedina@gmail.com&currency_code=USD&amount=5&item_name=Propina%20AITRANSVOICE%20Studio"
+                  href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=pagos@hostiasoft.com&currency_code=USD&amount=5&item_name=Propina%20AITRANSVOICE%20Studio"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-slate-950 hover:bg-slate-850 border border-slate-850 hover:border-emerald-500 text-slate-300 hover:text-white p-3 rounded-xl text-center transition-all cursor-pointer no-underline block"
@@ -1953,7 +2015,7 @@ export function LandingPage({
                 </a>
                 
                 <a
-                  href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=ruthgmedina@gmail.com&currency_code=USD&amount=15&item_name=Propina%20AITRANSVOICE%20Studio"
+                  href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=pagos@hostiasoft.com&currency_code=USD&amount=15&item_name=Propina%20AITRANSVOICE%20Studio"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-slate-950 hover:bg-slate-850 border border-emerald-500/20 hover:border-emerald-500 text-slate-300 hover:text-white p-3 rounded-xl text-center transition-all cursor-pointer no-underline block relative overflow-hidden"
@@ -1964,7 +2026,7 @@ export function LandingPage({
                 </a>
 
                 <a
-                  href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=ruthgmedina@gmail.com&currency_code=USD&amount=50&item_name=Propina%20AITRANSVOICE%20Studio"
+                  href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=pagos@hostiasoft.com&currency_code=USD&amount=50&item_name=Propina%20AITRANSVOICE%20Studio"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-slate-950 hover:bg-slate-850 border border-slate-850 hover:border-emerald-500 text-slate-300 hover:text-white p-3 rounded-xl text-center transition-all cursor-pointer no-underline block"
@@ -1976,7 +2038,7 @@ export function LandingPage({
 
               <div className="pt-2">
                 <a
-                  href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=ruthgmedina@gmail.com&currency_code=USD&item_name=Donacion%20AITRANSVOICE%20Studio"
+                  href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=pagos@hostiasoft.com&currency_code=USD&item_name=Donacion%20AITRANSVOICE%20Studio"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-indigo-650 hover:from-emerald-400 hover:to-indigo-550 text-white font-extrabold text-xs px-8 py-3.5 rounded-xl transition-all cursor-pointer uppercase shadow-lg shadow-emerald-550/20 hover:scale-102 select-none no-underline"
@@ -2003,58 +2065,1293 @@ export function LandingPage({
           />
         ) : (
           <>
-            {/* HERO SECTION - POWERED BY HOSTIA SOFT */}
-            <section className="text-center max-w-4xl mx-auto flex flex-col items-center space-y-6 pt-8 animate-fade-in">
+            {/* AUTORIA BRAND REBRANDING HERO SECTION */}
+            <section className="text-center max-w-5xl mx-auto flex flex-col items-center space-y-6 pt-8 animate-fade-in">
               
-              {/* Dynamic glowing full Hostia Soft emblem system for DIAGRAMMERS */}
-              <HostiaSoftFullLogo glow={true} className="pb-4 transform hover:scale-[1.01] transition-transform duration-300" />
+              {/* Autoria Full Glowing Logo */}
+              <AutoriaFullLogo glow={true} className="pb-4 transform hover:scale-[1.02] transition-transform duration-300 w-full max-w-md" />
 
-              <span className="inline-flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/20 px-3.5 py-1.5 rounded-full text-xs font-semibold text-cyan-400 font-mono tracking-wider">
-                <Sparkles className="w-3.5 h-3.5 text-fuchsia-400" />
-                HOSTIA SOFT • SOFTWARES DEMOCRÁTICOS PARA CAMBIAR EL MUNDO
-              </span>
+              <div className="inline-flex flex-wrap items-center justify-center gap-2.5 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-indigo-500/10 border border-rose-500/20 px-4 py-2 rounded-full text-xs font-bold text-slate-200 font-mono tracking-wider">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" style={{ animationDuration: '6s' }} />
+                <span>EVOLUCIÓN ESTRATÉGICA • DIAGRAMMERS ES AHORA AUTORIA AI</span>
+                <span className="bg-rose-500 text-white text-[9px] px-1.5 py-0.5 rounded font-black font-mono">PUBLISHING OS</span>
+              </div>
 
               <h2 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-white leading-[1.1]" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
                 {language === "en" ? (
-                  <>Typeset & Format Your <span className="bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-400 bg-clip-text text-transparent">Perfect Book</span> in One Click</>
+                  <>The Complete <span className="bg-gradient-to-r from-amber-400 via-rose-500 to-indigo-400 bg-clip-text text-transparent">Publishing OS</span> for Independent Authors</>
                 ) : language === "pt" ? (
-                  <>Formatte e Compagine seu <span className="bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-400 bg-clip-text text-transparent">Livro Perfeito</span> com um Clique</>
+                  <>O Sistema Operativo <span className="bg-gradient-to-r from-amber-400 via-rose-500 to-indigo-400 bg-clip-text text-transparent">Editorial Completo</span> para Autores</>
                 ) : (
-                  <>Maqueta y Compagina tu <span className="bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-400 bg-clip-text text-transparent">Libro Perfecto</span> en un Clic</>
+                  <>El Sistema Operativo <span className="bg-gradient-to-r from-amber-400 via-rose-500 to-indigo-400 bg-clip-text text-transparent">Editorial Completo</span> para Autores</>
                 )}
               </h2>
 
-          <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-2xl mx-auto font-sans">
-            {t.heroSubtitle}
-          </p>
+              <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-3xl mx-auto font-sans font-medium">
+                {language === "en" ? (
+                  "Autoria AI is not just a layout tool. It is the complete workspace where any person converts an idea into a fully formatted, registered, translated, narrated, and distributed book. Everything powered by specialized AI multi-agents."
+                ) : language === "pt" ? (
+                  "A Autoria AI não é apenas um diagramador. É o ecossistema completo onde qualquer pessoa converte uma ideia em um livro formatado, registrado, traduzido, narrado e distribuído de forma automatizada por multi-agentes de IA."
+                ) : (
+                  "Autoria AI no es un simple diagramador de libros. Es el ecosistema integral donde cualquier persona del mundo convierte una idea en un libro completamente maquetado, registrado, traducido, narrado y distribuido a nivel global de forma automatizada con Inteligencia Artificial Multiagente."
+                )}
+              </p>
 
-          <div className="pt-6 flex flex-wrap justify-center gap-4">
-            <button
-              onClick={() => {
-                setAuthTab("login");
-                setShowLoginModal(true);
-              }}
-              className="bg-gradient-to-r from-cyan-500 via-fuchsia-600 to-orange-500 hover:from-cyan-400 hover:via-fuchsia-500 hover:to-orange-400 text-white font-extrabold px-8 py-4 rounded-2xl text-sm sm:text-base tracking-wide shadow-xl shadow-cyan-500/20 shadow-fuchsia-500/10 transition-all hover:scale-105 hover:-translate-y-0.5 active:scale-100 flex items-center gap-3 cursor-pointer"
-            >
-              <span>{t.liveSoftware}</span>
-              <ArrowRight className="w-5 h-5 stroke-[2.5]" />
-            </button>
-            
-            <a
-              href="#financiero"
-              className="bg-slate-900/60 hover:bg-slate-850 text-slate-200 border border-slate-800 hover:border-slate-700 px-8 py-4 rounded-2xl text-sm sm:text-base font-semibold tracking-wide transition-all hover:-translate-y-0.5 active:scale-100 flex items-center gap-2 cursor-pointer"
-            >
-              <TrendingUp className="w-5 h-5 text-amber-400" />
-              <span>{t.financialPitch}</span>
-            </a>
-          </div>
+              <div className="pt-6 flex flex-wrap justify-center gap-4">
+                <button
+                  onClick={() => {
+                    setAuthTab("login");
+                    setShowLoginModal(true);
+                  }}
+                  className="bg-gradient-to-r from-amber-500 via-rose-600 to-indigo-600 hover:from-amber-400 hover:via-rose-500 hover:to-indigo-500 text-white font-extrabold px-8 py-4 rounded-2xl text-sm sm:text-base tracking-wide shadow-xl shadow-rose-550/20 transition-all hover:scale-105 hover:-translate-y-0.5 active:scale-100 flex items-center gap-3 cursor-pointer"
+                >
+                  <span>Acceder al DIAGRAMMERS Studio en Vivo</span>
+                  <ArrowRight className="w-5 h-5 stroke-[2.5]" />
+                </button>
+                
+                <a
+                  href="#autoria-os-explorer"
+                  className="bg-slate-900/60 hover:bg-slate-850 text-slate-200 border border-slate-800 hover:border-slate-700 px-8 py-4 rounded-2xl text-sm sm:text-base font-semibold tracking-wide transition-all hover:-translate-y-0.5 active:scale-100 flex items-center gap-2 cursor-pointer"
+                >
+                  <Cpu className="w-5 h-5 text-rose-400" />
+                  <span>Explorar 11 Pasos del Sistema Operativo</span>
+                </a>
+              </div>
 
-          <div className="pt-8 flex justify-center items-center gap-6 text-xs text-slate-500 font-mono">
-            <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500" /> {t.unlimitedAccess}</span>
-            <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500" /> {t.universalTemplates}</span>
-            <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-emerald-500" /> {t.fullTipographicCtrl}</span>
-          </div>
-        </section>
+              <div className="pt-8 flex flex-wrap justify-center items-center gap-6 text-xs text-slate-500 font-mono">
+                <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-rose-500" /> Generación & Escritura IA</span>
+                <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-rose-500" /> Maquetación Suiza KDP</span>
+                <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-rose-500" /> Audiolibros & Traducciones</span>
+                <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-rose-500" /> CRM de Ventas integrado</span>
+              </div>
+            </section>
+
+            {/* AUTORIA OS 11-STEP INTERACTIVE WORKSPACE */}
+            <section id="autoria-os-explorer" className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 md:p-8 space-y-8 relative overflow-hidden backdrop-blur-sm animate-fade-in">
+              <div className="absolute -top-12 -right-12 w-48 h-48 bg-gradient-to-br from-amber-500/10 to-rose-500/5 rounded-full blur-3xl pointer-events-none"></div>
+              
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-800/60">
+                <div className="space-y-1">
+                  <span className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-500/20 to-rose-500/20 text-amber-300 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border border-amber-500/15">
+                    <Cpu className="w-3.5 h-3.5 text-amber-400" />
+                    Interactive Ecosystem Explorer
+                  </span>
+                  <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+                    Los 11 Pasos del Sistema Operativo Editorial
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-400 max-w-2xl">
+                    Haz clic en cada paso para ver el simulador interactivo en tiempo real y experimentar cómo AUTORIA AI unifica todo el ecosistema de publicación.
+                  </p>
+                </div>
+                
+                <div className="bg-slate-950 border border-slate-850 px-4 py-2 rounded-xl text-xs flex items-center gap-2 text-slate-300 font-mono">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>Estructura 100% Integrada</span>
+                </div>
+              </div>
+
+              {/* 11 STEPS TABS SELECTOR */}
+              <div className="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-11 gap-2">
+                {[
+                  { num: 1, label: "Ideas", icon: Sparkles, color: "hover:border-amber-500 text-amber-400" },
+                  { num: 2, label: "Escritura", icon: FileText, color: "hover:border-rose-500 text-rose-400" },
+                  { num: 3, label: "Edición", icon: Sliders, color: "hover:border-indigo-500 text-indigo-400" },
+                  { num: 4, label: "Diagramar", icon: Book, color: "hover:border-amber-400 text-amber-300" },
+                  { num: 5, label: "Diseño", icon: Award, color: "hover:border-fuchsia-500 text-fuchsia-400" },
+                  { num: 6, label: "Registro", icon: ShieldCheck, color: "hover:border-emerald-500 text-emerald-400" },
+                  { num: 7, label: "Traducción", icon: Languages, color: "hover:border-cyan-500 text-cyan-400" },
+                  { num: 8, label: "Audio", icon: Mic, color: "hover:border-purple-500 text-purple-400" },
+                  { num: 9, label: "Publicar", icon: Globe, color: "hover:border-orange-500 text-orange-400" },
+                  { num: 10, label: "Marketing", icon: Flame, color: "hover:border-pink-500 text-pink-400" },
+                  { num: 11, label: "Ventas", icon: TrendingUp, color: "hover:border-emerald-400 text-emerald-300" },
+                ].map((st) => {
+                  const StepIcon = st.icon;
+                  const isActive = activeStep === st.num;
+                  return (
+                    <button
+                      key={st.num}
+                      onClick={() => setActiveStep(st.num)}
+                      className={`flex flex-col items-center justify-center p-2 rounded-xl border text-center transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-slate-800 border-rose-500 text-white shadow-lg scale-102"
+                          : "bg-slate-950 border-slate-850 text-slate-400 " + st.color
+                      }`}
+                    >
+                      <StepIcon className="w-4 h-4 mb-1" />
+                      <span className="text-[10px] font-bold block">{st.num}</span>
+                      <span className="text-[9px] font-medium block truncate max-w-full">{st.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* STEP INTERACTIVE LAYOUT CONTENT */}
+              <div className="bg-slate-950 border border-slate-850 rounded-2xl p-5 md:p-6 min-h-[380px] flex flex-col justify-between transition-all">
+                
+                {/* STEP 1: GENERACIÓN DE IDEAS */}
+                {activeStep === 1 && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="flex items-center gap-2 text-amber-400">
+                      <Sparkles className="w-5 h-5" />
+                      <h4 className="text-base font-bold text-white font-mono uppercase">Paso 1: Generación de Ideas & Mapas Mentales</h4>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Escribe la idea general de tu libro y el motor de AUTORIA AI simulará el análisis del mercado independiente en Amazon KDP, diseñando un mapa de capítulos estratégico y sugiriendo palabras clave de alta conversión.
+                    </p>
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={brainstormPrompt}
+                          onChange={(e) => setBrainstormPrompt(e.target.value)}
+                          className="flex-1 bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none focus:border-amber-500"
+                          placeholder="Idea del libro o tema general..."
+                        />
+                        <button
+                          onClick={() => {
+                            setIsBrainstorming(true);
+                            setTimeout(() => {
+                              setIsBrainstorming(false);
+                              setBrainstormResult(
+                                `🚀 ESTRUCTURA DETALLADA DE LIBRO GENERADA CON ÉXITO\n\n` +
+                                `Título Recomendado: "El Misterio de ${brainstormPrompt}"\n` +
+                                `Categoría KDP Ideal: Narrativa de Suspenso / Ficción Geográfica y Costumbrista\n\n` +
+                                `• CAPÍTULO 1: La Niebla Oculta (Establece el ambiente inicial, los misterios del lugar y la introducción del conflicto principal)\n` +
+                                `• CAPÍTULO 2: El Eco de las Profundidades (Revelación del secreto ancestral y sospechas sobre los lugareños)\n` +
+                                `• CAPÍTULO 3: El Acantilado del Silencio (Pistas falsas, drama y tensión que empujan al clímax)\n` +
+                                `• CAPÍTULO 4: Destellos de la Verdad (El gran clímax y resolución moral del protagonista)\n\n` +
+                                `🔥 ESTRATEGIA DE PALABRAS CLAVE:\n` +
+                                `1. novela suspenso andino  2. misterio pueblo  3. drama latinoamericano  4. libros misterio Amazon KDP`
+                              );
+                            }, 1200);
+                          }}
+                          className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 rounded-xl text-xs transition-all flex items-center gap-1 shrink-0"
+                        >
+                          {isBrainstorming ? "Calculando..." : "Analizar con IA"}
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {brainstormResult ? (
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-[11px] font-mono text-amber-200 leading-relaxed whitespace-pre-line max-h-56 overflow-y-auto">
+                          {brainstormResult}
+                        </div>
+                      ) : (
+                        <div className="bg-slate-900/50 border border-dashed border-slate-850 rounded-xl p-6 text-center text-xs text-slate-500 font-mono">
+                          {isBrainstorming ? (
+                            <span className="flex items-center justify-center gap-2 text-amber-400/80 animate-pulse">
+                              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                              Escaneando competidores de Amazon KDP...
+                            </span>
+                          ) : (
+                            "Haz clic en 'Analizar con IA' para generar una estructura completa desde cero."
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 2: ESCRITURA ASISTIDA */}
+                {activeStep === 2 && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="flex items-center gap-2 text-rose-400">
+                      <FileText className="w-5 h-5" />
+                      <h4 className="text-base font-bold text-white font-mono uppercase">Paso 2: Escritura Asistida & Adaptador de Tono</h4>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Adapta tu borrador o guiones de video al instante. Elige el tono deseado y observa cómo nuestro coautor IA reescribe tu mensaje con máxima elocuencia. (Ideal para el guión de 45 segundos del video de Amazon).
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Borrador Inicial:</label>
+                        <textarea
+                          value={rewriteText}
+                          onChange={(e) => setRewriteText(e.target.value)}
+                          className="w-full h-32 bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 outline-none focus:border-rose-500 font-sans resize-none"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] uppercase font-bold text-rose-400 block font-mono">Salida Optimizada por IA:</label>
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <span className="text-slate-400 font-mono text-[10px]">Tono:</span>
+                            <select
+                              value={rewriteTone}
+                              onChange={(e) => setRewriteTone(e.target.value)}
+                              className="bg-slate-900 text-slate-200 text-[11px] rounded border border-slate-800 px-2 py-0.5"
+                            >
+                              <option value="Persuasivo Comercial">Persuasivo Comercial (Curso + Diagrammers)</option>
+                              <option value="Novela de Fantasía">Novela de Fantasía Dramática</option>
+                              <option value="Académico Formal">Académico de Alta Rigurosidad</option>
+                              <option value="Emprendedor Motivacional">Emprendedor & Autoayuda</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {rewrittenText ? (
+                          <div className="w-full h-32 bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-rose-200 font-sans overflow-y-auto leading-relaxed">
+                            {rewrittenText}
+                          </div>
+                        ) : (
+                          <div className="w-full h-32 bg-slate-900/50 border border-dashed border-slate-850 rounded-xl flex items-center justify-center text-center p-4 text-xs text-slate-500 font-mono">
+                            {isRewritingTextState ? "Reescribiendo prosa literaria..." : "Haz clic en 'Reescribir Texto' para ver la magia editorial."}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => {
+                          setIsRewritingTextState(true);
+                          setTimeout(() => {
+                            setIsRewritingTextState(false);
+                            if (rewriteTone === "Persuasivo Comercial") {
+                              setRewrittenText(
+                                `🎬 [GUION DE VIDEO DE 45 SEGUNDOS RECOMENDADO]\n` +
+                                `«A ti escritor que no has logrado subir tu libro a Amazon: yo también estuve allí hace un tiempo. ¿Por qué rendirte ante la pesadilla técnica de márgenes y sangrías? Con el Curso de Compaginación Élite y la plataforma unificada AUTORIA AI, la maquetación se resuelve en un solo clic. Accede hoy mismo, desbloquea la Suite de diagramación profesional, y publica tu obra en todo el mundo cobrando regalías directas en dólares sin intermediarios. ¡El éxito de tu libro está a una matrícula de distancia!»`
+                              );
+                            } else if (rewriteTone === "Novela de Fantasía") {
+                              setRewrittenText(
+                                `«Aquel que empuña la pluma sin ver su obra coronada en los anales del gran mercado: sabed que yo también caminé por ese sendero de sombras. Las intrincadas leyes de la diagramación eran cadenas, pero hoy AUTORIA rompe los grilletes...»`
+                              );
+                            } else {
+                              setRewrittenText(
+                                `«Estimado profesional de la escritura: comprendemos las barreras sistémicas relativas a la autoedición digital. Nuestro estudio analítico evidencia que un 84% de manuscritos son inicialmente rechazados en Amazon KDP debido a descalces tipográficos. La solución integrada AUTORIA AI subsana de raíz dicha problemática mediante márgenes computados...»`
+                              );
+                            }
+                          }, 1000);
+                        }}
+                        className="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition-all flex items-center gap-1.5"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>Reescribir Texto</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 3: EDICIÓN PROFESIONAL */}
+                {activeStep === 3 && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="flex items-center gap-2 text-indigo-400">
+                      <Sliders className="w-5 h-5" />
+                      <h4 className="text-base font-bold text-white font-mono uppercase">Paso 3: Edición Profesional & Árbol de Capítulos</h4>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Visualiza el gestor de jerarquías de tu manuscrito. Organiza capítulos, define subtítulos, controla el estado de corrección ortotipográfica y genera el índice general de forma automática.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-[11px]">
+                      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 col-span-2">
+                        <div className="flex justify-between items-center border-b border-slate-850 pb-2">
+                          <span className="text-slate-200 font-bold">ESTRUCTURA GENERAL DEL BORRADOR</span>
+                          <span className="text-indigo-400 font-bold">3 Capítulos (4,250 Palabras)</span>
+                        </div>
+                        <div className="space-y-2 text-slate-300">
+                          <div className="flex items-center justify-between bg-slate-950 p-2 rounded border border-slate-850">
+                            <span className="flex items-center gap-2">
+                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              <span>Capítulo 1: La Iniciativa Secreta</span>
+                            </span>
+                            <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.2 rounded">Aprobado</span>
+                          </div>
+                          <div className="flex items-center justify-between bg-slate-950 p-2 rounded border border-slate-850">
+                            <span className="flex items-center gap-2">
+                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              <span>Capítulo 2: El Abismo Técnico</span>
+                            </span>
+                            <span className="text-[10px] bg-yellow-500/10 text-yellow-400 px-1.5 py-0.2 rounded">En Revisión</span>
+                          </div>
+                          <div className="flex items-center justify-between bg-slate-950 p-2 rounded border border-slate-850">
+                            <span className="flex items-center gap-2 text-slate-500">
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Capítulo 3: Publicación Exitosa (Borrador)</span>
+                            </span>
+                            <span className="text-[10px] bg-rose-500/10 text-rose-400 px-1.5 py-0.2 rounded">Borrador</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <span className="text-slate-200 font-bold block border-b border-slate-850 pb-2">OPCIONES DE ESTILO</span>
+                        <ul className="space-y-2 text-slate-400">
+                          <li className="flex items-center gap-1.5">
+                            <span className="text-emerald-500">✔</span>
+                            <span>Índice Automático Activo</span>
+                          </li>
+                          <li className="flex items-center gap-1.5">
+                            <span className="text-emerald-500">✔</span>
+                            <span>Notas al Pie Dinámicas</span>
+                          </li>
+                          <li className="flex items-center gap-1.5">
+                            <span className="text-emerald-500">✔</span>
+                            <span>Garamond Arquetipo 11pt</span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 4: DIAGRAMACIÓN AUTOMÁTICA */}
+                {activeStep === 4 && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="flex items-center gap-2 text-amber-300">
+                      <Book className="w-5 h-5" />
+                      <h4 className="text-base font-bold text-white font-mono uppercase">Paso 4: Diagramación Automática & Márgenes KDP</h4>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      El corazón técnico. Nuestro motor calcula los márgenes matemáticos exactos (márgenes de corte, sangrados externos e internos de lomo) según el número de páginas de tu manuscrito.
+                    </p>
+                    
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center gap-6 justify-between">
+                      <div className="space-y-3 font-mono text-[11px] text-slate-350">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 bg-slate-950 p-3 rounded-xl border border-slate-850">
+                          <span>Tamaño del Libro:</span>
+                          <strong className="text-amber-400">5.5" x 8.5" (Estándar KDP)</strong>
+                          <span>Extensión del manuscrito:</span>
+                          <strong className="text-amber-400">{trialBookPages} páginas</strong>
+                          <span>Sangrado (Bleed):</span>
+                          <strong className="text-emerald-400">0.125 in (Obligatorio)</strong>
+                          <span>Grosor de Lomo calculado:</span>
+                          <strong className="text-rose-400">{(trialBookPages * 0.00225).toFixed(4)} in</strong>
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-normal">
+                          * Cumple estrictamente las pautas suizas de retícula base para evitar rechazos automatizados en Amazon.
+                        </p>
+                      </div>
+
+                      {/* PHYSICAL LAYOUT BOOK SIMULATOR GRAPHICS */}
+                      <div className="w-56 bg-slate-950 border border-slate-800 p-4 rounded-xl text-center space-y-2 relative shadow-lg">
+                        <span className="text-[8px] font-mono text-slate-550 block uppercase">Dual Page Real-time Preview</span>
+                        <div className="flex gap-2 justify-center">
+                          {/* Left page mockup */}
+                          <div className="w-20 h-28 bg-white/5 border border-white/10 rounded-l p-1.5 text-left relative">
+                            <div className="w-full h-1 bg-white/20 mb-2"></div>
+                            <div className="space-y-1">
+                              <div className="w-12 h-1 bg-white/10"></div>
+                              <div className="w-14 h-1 bg-white/10"></div>
+                              <div className="w-10 h-1 bg-white/10"></div>
+                            </div>
+                            <span className="absolute bottom-1 left-2 text-[6px] text-white/40">2</span>
+                          </div>
+                          {/* Right page mockup */}
+                          <div className="w-20 h-28 bg-white/5 border border-white/10 rounded-r p-1.5 text-left relative">
+                            <div className="w-full h-1 bg-white/20 mb-2"></div>
+                            <div className="space-y-1">
+                              <div className="w-14 h-1 bg-white/10"></div>
+                              <div className="w-10 h-1 bg-white/10"></div>
+                              <div className="w-12 h-1 bg-white/10"></div>
+                            </div>
+                            <span className="absolute bottom-1 right-2 text-[6px] text-white/40">3</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] text-amber-400 font-mono">⚡ Listo para compilar en PDF de alta fidelidad</span>
+                      <button
+                        onClick={() => {
+                          if (typeof onNavigateToStudio === "function") {
+                            onNavigateToStudio({ email: loginEmail || "anonimo@autoria.ai", name: "Autor Elite", workspace: "Mi Ecosistema" });
+                          } else {
+                            showToast("Redireccionando al Studio...", "success");
+                          }
+                        }}
+                        className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-6 rounded-xl text-xs transition-all flex items-center gap-1.5"
+                      >
+                        <ArrowRight className="w-4 h-4" />
+                        <span>Abrir Diagramador Studio</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 5: DISEÑO DE PORTADAS */}
+                {activeStep === 5 && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="flex items-center gap-2 text-fuchsia-400">
+                      <Award className="w-5 h-5" />
+                      <h4 className="text-base font-bold text-white font-mono uppercase">Paso 5: Diseño de Portadas IA & Visualizador Físico</h4>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Genera portadas espectaculares en segundos. Escribe el título, autor, estilo artístico y visualiza el libro en una maqueta física tridimensional con acabados profesionales.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3 font-mono text-[11px]">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-slate-400 block">Título del Libro:</label>
+                          <input
+                            type="text"
+                            value={coverTitle}
+                            onChange={(e) => setCoverTitle(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-850 rounded p-2 text-white text-xs outline-none focus:border-fuchsia-500"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-slate-400 block">Nombre del Autor:</label>
+                          <input
+                            type="text"
+                            value={coverAuthor}
+                            onChange={(e) => setCoverAuthor(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-850 rounded p-2 text-white text-xs outline-none focus:border-fuchsia-500"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-slate-400 block">Estilo Visual Artístico:</label>
+                          <select
+                            value={activeCoverStyle}
+                            onChange={(e) => setActiveCoverStyle(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-850 rounded p-2 text-white text-xs outline-none focus:border-fuchsia-500"
+                          >
+                            <option value="Minimalista Suizo">Minimalista Suizo (Editorial)</option>
+                            <option value="Óleo Dramático">Óleo Dramático Clásico</option>
+                            <option value="Fantasía Cósmica">Fantasía Cósmica / Ilustrado</option>
+                            <option value="Monocromo Técnico">Monocromo Técnico / Negocios</option>
+                          </select>
+                        </div>
+                        
+                        <button
+                          onClick={() => {
+                            setIsGeneratingCover(true);
+                            setTimeout(() => {
+                              setIsGeneratingCover(false);
+                              showToast("¡Diseño de portada computado con éxito por la IA!", "success");
+                            }, 1500);
+                          }}
+                          className="w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold py-2.5 rounded-lg transition-all"
+                        >
+                          {isGeneratingCover ? "Pintando portada con IA..." : "Generar Portada Editorial"}
+                        </button>
+                      </div>
+
+                      {/* PHYSICAL 3D BOOK COVER MOCKUP VIEW */}
+                      <div className="flex items-center justify-center bg-slate-900 border border-slate-800 rounded-xl p-4 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-t from-fuchsia-500/5 to-indigo-500/5"></div>
+                        
+                        {/* 3D Physical Book rendering */}
+                        <div className="w-40 h-56 rounded bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 border-y border-r border-slate-800 relative shadow-2xl flex flex-col justify-between p-4 text-center transform hover:rotate-3 transition-transform duration-300">
+                          {/* Spine effect highlights */}
+                          <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-r from-white/15 to-transparent border-r border-slate-900/60"></div>
+                          
+                          <span className="text-[7px] font-mono text-amber-500 tracking-widest uppercase block relative z-10">AUTORIA EDITORIAL</span>
+                          
+                          {/* Cover Center Art Mockup based on style */}
+                          <div className="flex-1 my-3 flex flex-col items-center justify-center relative">
+                            {activeCoverStyle === "Minimalista Suizo" ? (
+                              <div className="w-12 h-12 rounded-full border border-rose-500/30 flex items-center justify-center text-[8px] font-mono text-rose-400">
+                                S.O.
+                              </div>
+                            ) : activeCoverStyle === "Óleo Dramático" ? (
+                              <div className="w-16 h-16 bg-gradient-to-b from-amber-500/20 via-rose-500/20 to-transparent rounded-lg border border-amber-500/25"></div>
+                            ) : activeCoverStyle === "Fantasía Cósmica" ? (
+                              <div className="w-14 h-14 bg-gradient-to-tr from-fuchsia-500/30 via-indigo-500/30 to-amber-500/20 rounded-full animate-pulse border border-fuchsia-500/20"></div>
+                            ) : (
+                              <div className="w-16 h-8 bg-slate-800 rounded border border-slate-700 font-mono text-[7px] text-slate-400 flex items-center justify-center">GRID MATRIX</div>
+                            )}
+                          </div>
+
+                          <div className="space-y-1 relative z-10">
+                            <h5 className="text-[10px] font-bold text-white tracking-wide uppercase line-clamp-2 leading-none font-sans" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+                              {coverTitle}
+                            </h5>
+                            <p className="text-[7.5px] text-slate-400 font-mono tracking-widest">{coverAuthor}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 6: REGISTRO DE AUTORÍA */}
+                {activeStep === 6 && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="flex items-center gap-2 text-emerald-400">
+                      <ShieldCheck className="w-5 h-5" />
+                      <h4 className="text-base font-bold text-white font-mono uppercase">Paso 6: Registro de Propiedad Intelectual & Safe Creative</h4>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      La seguridad jurídica es fundamental para todo escritor de élite. Calcula el hash SHA-256 definitivo de tu manuscrito y genera un registro legal de Safe Creative junto con tu código ISBN provisional.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-[11px]">
+                      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                        <span className="text-emerald-400 font-bold block border-b border-slate-850 pb-1.5 uppercase">Protección Legal Safe Creative</span>
+                        <div className="space-y-2 text-slate-350">
+                          <div className="flex justify-between">
+                            <span>Estado de Protección:</span>
+                            <strong className="text-emerald-400">REGISTRADO EN SANDBOX</strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Fingerprint SHA-256:</span>
+                            <span className="text-[9px] text-slate-400">f9e823d02a39281bc89a71ea94511c1e0</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Fecha de Depósito:</span>
+                            <span>{new Date().toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-2">
+                        <span className="text-slate-200 font-bold uppercase tracking-wider block">ISBN provisional y Código de Barras</span>
+                        <span className="text-emerald-300 text-xs font-bold font-mono">ISBN: 978-3-16-148410-0</span>
+                        
+                        {/* SVG Barcode simulation */}
+                        <div className="bg-white p-2.5 rounded border border-slate-800 w-44 flex flex-col items-center">
+                          <div className="flex gap-[1.5px] h-9 items-stretch">
+                            {[1,3,1,1,2,4,1,2,1,3,1,2,1,1,2,1,3,1,1,2,4,1,1,2,1,3,1].map((w, i) => (
+                              <span key={i} className="bg-black" style={{ width: `${w * 1.5}px` }} />
+                            ))}
+                          </div>
+                          <span className="text-[7.5px] text-black font-mono font-bold mt-1 tracking-wider">9783161484100</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 7: TRADUCCIÓN INTELIGENTE */}
+                {activeStep === 7 && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="flex items-center gap-2 text-cyan-400">
+                      <Languages className="w-5 h-5" />
+                      <h4 className="text-base font-bold text-white font-mono uppercase">Paso 7: Traducción Inteligente a Más de 100 Idiomas</h4>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Rompe las fronteras lingüísticas. Nuestro traductor literario IA preserva el estilo narrativo original, los modismos culturales y la voz de autor en cualquiera de las lenguas de destino más importantes.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Texto Original (Español):</label>
+                        <textarea
+                          defaultValue="La literatura es el arte de expresar el alma del mundo. No hay límites de idioma cuando la narrativa es pura."
+                          className="w-full h-24 bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none font-sans resize-none"
+                        />
+                      </div>
+                      
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] uppercase font-bold text-cyan-400 block font-mono">Traducción Proyectada:</label>
+                          <select
+                            value={stepTranslationLang}
+                            onChange={(e) => setStepTranslationLang(e.target.value)}
+                            className="bg-slate-900 text-slate-200 text-[10px] rounded border border-slate-800 px-1.5"
+                          >
+                            <option value="en">English (Estados Unidos)</option>
+                            <option value="pt">Português (Brasil)</option>
+                            <option value="fr">Français (Francia)</option>
+                            <option value="it">Italiano (Italia)</option>
+                          </select>
+                        </div>
+                        
+                        {translatedStepResult ? (
+                          <div className="w-full h-24 bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-cyan-200 overflow-y-auto leading-relaxed">
+                            {translatedStepResult}
+                          </div>
+                        ) : (
+                          <div className="w-full h-24 bg-slate-900/50 border border-dashed border-slate-850 rounded-xl flex items-center justify-center text-center p-3 text-xs text-slate-500 font-mono">
+                            {isTranslatingStep ? "Sincronizando traducción literaria..." : "Haz clic en 'Traducir Borrador'."}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => {
+                          setIsTranslatingStep(true);
+                          setTimeout(() => {
+                            setIsTranslatingStep(false);
+                            if (stepTranslationLang === "en") {
+                              setTranslatedStepResult("«Literature is the art of expressing the soul of the world. There are no language boundaries when the narrative is pure.»");
+                            } else if (stepTranslationLang === "pt") {
+                              setTranslatedStepResult("«A literatura é a arte de expressar a alma do mundo. Não há limites de idioma quando a narrativa é pura.»");
+                            } else if (stepTranslationLang === "fr") {
+                              setTranslatedStepResult("«La littérature est l'art d'exprimer l'âme du monde. Il n'y a pas de barrières linguistiques quand le récit est pur.»");
+                            } else {
+                              setTranslatedStepResult("«La letteratura è l'arte di esprimere l'anima del mondo. Non ci sono confini linguistici quando la narrazione è pura.»");
+                            }
+                          }, 900);
+                        }}
+                        className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg text-xs"
+                      >
+                        Traducir Borrador
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 8: AUDIOBOOKS & NARRACIÓN AI */}
+                {activeStep === 8 && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="flex items-center gap-2 text-purple-400">
+                      <Mic className="w-5 h-5" />
+                      <h4 className="text-base font-bold text-white font-mono uppercase">Paso 8: Narración IA & Audiolibro Express</h4>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Sintetiza tu obra o audiolibro instantáneamente. Selecciona una voz actoral premium del ecosistema de Autoria & AITRANSVOICE y escucha el dictado fluido en voz alta.
+                    </p>
+                    
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row items-center gap-6 justify-between">
+                      <div className="flex-1 space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Ingresa el Fragmento a Escuchar:</label>
+                        <input
+                          type="text"
+                          id="step8-voice-text"
+                          defaultValue="La plataforma Autoria AI ha sintetizado este texto con la máxima nitidez de audiolibro."
+                          className="w-full bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      
+                      <div className="space-y-3 font-mono text-[11px] text-slate-350 shrink-0">
+                        <div className="flex items-center gap-2">
+                          <span>Voz Narrador:</span>
+                          <select
+                            id="step8-voice-actor"
+                            className="bg-slate-950 text-slate-200 rounded border border-slate-800 px-2 py-1 text-xs"
+                          >
+                            <option value="elena">Elena (Español Natural)</option>
+                            <option value="mateo">Mateo (Novela Narrativa)</option>
+                            <option value="clara">Clara (Poesía & Ensayo)</option>
+                          </select>
+                        </div>
+                        
+                        <button
+                          onClick={() => {
+                            const inputEl = document.getElementById("step8-voice-text") as HTMLInputElement;
+                            const text = inputEl ? inputEl.value : "Hola";
+                            showToast("Sintetizando discurso de audiolibro...", "info");
+                            if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                              window.speechSynthesis.cancel();
+                              const utterance = new SpeechSynthesisUtterance(text);
+                              utterance.lang = "es-ES";
+                              window.speechSynthesis.speak(utterance);
+                            } else {
+                              showToast("SpeechSynthesis no soportado en este iframe.", "warning");
+                            }
+                          }}
+                          className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2"
+                        >
+                          <Volume2 className="w-4 h-4" />
+                          <span>Reproducir Voz IA</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 9: PUBLICACIÓN GLOBAL */}
+                {activeStep === 9 && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="flex items-center gap-2 text-orange-400">
+                      <Globe className="w-5 h-5" />
+                      <h4 className="text-base font-bold text-white font-mono uppercase">Paso 9: Publicación en Amazon KDP, Apple & Google Books</h4>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      El puente directo al mercado global de libros. Exporta tu PDF con el estándar exacto que requiere la imprenta bajo demanda de Amazon KDP y sube tus libros EPUB a Google Play Books y Apple Books sin rechazos.
+                    </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center font-mono text-[11px]">
+                      <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl">
+                        <strong className="text-white block mb-1">AMAZON KDP</strong>
+                        <span className="text-slate-400">Físico / Tapa Blanda / Ebook</span>
+                        <div className="w-full h-1 bg-amber-500/35 rounded mt-2"></div>
+                      </div>
+                      <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl">
+                        <strong className="text-white block mb-1">GOOGLE BOOKS</strong>
+                        <span className="text-slate-400">Distribución en 120 países</span>
+                        <div className="w-full h-1 bg-emerald-500/35 rounded mt-2"></div>
+                      </div>
+                      <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl">
+                        <strong className="text-white block mb-1">APPLE BOOKS</strong>
+                        <span className="text-slate-400">Ecosistema iOS y iPadOS</span>
+                        <div className="w-full h-1 bg-cyan-500/35 rounded mt-2"></div>
+                      </div>
+                      <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl">
+                        <strong className="text-white block mb-1">INGRAMSPARK</strong>
+                        <span className="text-slate-400">Librerías físicas globales</span>
+                        <div className="w-full h-1 bg-rose-500/35 rounded mt-2"></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 10: MARKETING AUTOMÁTICO */}
+                {activeStep === 10 && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="flex items-center gap-2 text-pink-400">
+                      <Flame className="w-5 h-5" />
+                      <h4 className="text-base font-bold text-white font-mono uppercase">Paso 10: Inteligencia de Marketing & Tráfico Cruzado</h4>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Estructura campañas de anuncios ganadoras. Combina el poder de Meta Ads, Google y Amazon Ads para generar tráfico continuo de lectores hacia tu página de compra sin malgastar presupuesto.
+                    </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px] font-mono">
+                      <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-2">
+                        <strong className="text-rose-400 block border-b border-slate-850 pb-1 uppercase">Meta & Instagram Ads</strong>
+                        <p className="text-slate-400 leading-relaxed">
+                          "Atención lectores de novelas de misterio... Descubre el secreto mejor guardado de los Andes en este nuevo lanzamiento. Compra hoy con un clic en Amazon."
+                        </p>
+                      </div>
+                      <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-2">
+                        <strong className="text-amber-400 block border-b border-slate-850 pb-1 uppercase">Amazon Keywords Ads</strong>
+                        <p className="text-slate-400 leading-relaxed">
+                          Pujar por términos clave como: "libros de suspense de habla hispana", "novelas de misterio más vendidas", "autores recomendados".
+                        </p>
+                      </div>
+                      <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-2">
+                        <strong className="text-cyan-400 block border-b border-slate-850 pb-1 uppercase">Campañas de Emailing</strong>
+                        <p className="text-slate-400 leading-relaxed">
+                          Automatizaciones semanales dirigidas a tus primeros 500 suscriptores mediante un embudo de conversión clásico de venta directa.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 11: VENTAS & CRM */}
+                {activeStep === 11 && (
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="flex items-center gap-2 text-emerald-300">
+                      <TrendingUp className="w-5 h-5" />
+                      <h4 className="text-base font-bold text-white font-mono uppercase">Paso 11: Ventas, CRM de Lectores & Regalías</h4>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      El panel definitivo de tu negocio editorial. Analiza tus regalías reales devengadas, monitorea las ventas diarias y consolida una base de datos propia de lectores fieles (CRM) para tus futuros lanzamientos.
+                    </p>
+                    
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row items-center gap-6 justify-between">
+                      <div className="grid grid-cols-2 gap-4 font-mono text-[11px] text-slate-350 flex-1">
+                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-850">
+                          <span>Total Libros Vendidos:</span>
+                          <strong className="text-emerald-400 block text-lg mt-1">1,482 copias</strong>
+                        </div>
+                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-850">
+                          <span>Regalías Netas (USD):</span>
+                          <strong className="text-emerald-400 block text-lg mt-1">$4,850.25 USD</strong>
+                        </div>
+                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-850">
+                          <span>Precio Promedio / Venta:</span>
+                          <strong className="text-slate-200 block text-xs mt-1">$3.99 - $12.99 USD</strong>
+                        </div>
+                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-850">
+                          <span>Lectores en CRM Activos:</span>
+                          <strong className="text-rose-400 block text-xs mt-1">542 suscriptores</strong>
+                        </div>
+                      </div>
+
+                      {/* MINIMATURE SALES CHART SIMULATOR */}
+                      <div className="w-48 bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-3">
+                        <span className="text-[8px] font-mono text-slate-500 block uppercase text-center">HISTORIAL DE INGRESOS MENSUALES</span>
+                        <div className="flex items-end gap-2.5 h-16 justify-center">
+                          {[15, 30, 45, 25, 60, 85].map((h, i) => (
+                            <div key={i} className="flex-1 bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-t relative group" style={{ height: `${h}%` }}>
+                              <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[7px] text-emerald-400 opacity-0 group-hover:opacity-100 font-bold">${h * 10}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-between text-[7px] text-slate-500 font-mono">
+                          <span>Ene</span>
+                          <span>Mar</span>
+                          <span>May</span>
+                          <span>Jul</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* BOTTOM BRAND FOOTNOTE */}
+                <div className="pt-4 border-t border-slate-850 text-right">
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    AUTORIA AI PLATFORM v1.4 • TODO EL UNIVERSO EDITORIAL EN UN SOLO ENTORNO
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            {/* AI MULTIAGENTE CONTROL PANEL */}
+            <section className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 md:p-8 space-y-6 relative overflow-hidden backdrop-blur-sm animate-fade-in">
+              <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+                <Cpu className="w-32 h-32 text-rose-500" />
+              </div>
+
+              <div className="space-y-1">
+                <span className="inline-flex items-center gap-1 bg-rose-500/10 text-rose-400 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border border-rose-500/15">
+                  <Cpu className="w-3.5 h-3.5" />
+                  Multi-Agent AI Network
+                </span>
+                <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+                  Panel de Control Multiagente Editorial
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-400">
+                  En lugar de un chatbot genérico, AUTORIA cuenta con una red de agentes especializados que atienden tus necesidades específicas. Selecciona un agente y hazle una consulta estratégica.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Agent Selection List */}
+                <div className="lg:col-span-4 bg-slate-950 border border-slate-850 rounded-2xl p-4 space-y-2 max-h-[360px] overflow-y-auto">
+                  <span className="text-[9px] font-mono font-bold text-slate-500 block uppercase mb-2">AGENTES ESPECIALIZADOS</span>
+                  {[
+                    { id: "editor", name: "Editor Profesional", desc: "Mejora del ritmo & estructura de prosa", bg: "from-amber-500/25 to-amber-500/5", border: "border-amber-500/20", icon: Sparkles },
+                    { id: "corrector", name: "Corrector de Estilo", desc: "Ortotipografía & coherencia narrativa", bg: "from-rose-500/25 to-rose-500/5", border: "border-rose-500/20", icon: FileText },
+                    { id: "disenador", name: "Diseñador de Portadas", desc: "Tipografía & estética física de tapas", bg: "from-fuchsia-500/25 to-fuchsia-500/5", border: "border-fuchsia-500/20", icon: Award },
+                    { id: "traductor", name: "Traductor Experto", desc: "Localización cultural en 100+ idiomas", bg: "from-cyan-500/25 to-cyan-500/5", border: "border-cyan-500/20", icon: Languages },
+                    { id: "kdp", name: "Experto en Amazon KDP", desc: "Reglas de imprenta, márgenes y categorías", bg: "from-orange-500/25 to-orange-500/5", border: "border-orange-500/20", icon: Globe },
+                    { id: "marketing", name: "Especialista en Ads", desc: "Embudos Meta Ads, Google & Amazon", bg: "from-pink-500/25 to-pink-500/5", border: "border-pink-500/20", icon: Flame },
+                    { id: "coach", name: "Coach Editorial", desc: "Habilidades, hábitos & bloqueos de autor", bg: "from-emerald-500/25 to-emerald-500/5", border: "border-emerald-500/20", icon: ShieldCheck },
+                  ].map((ag) => {
+                    const AgIcon = ag.icon;
+                    const isSelected = selectedAgent === ag.id;
+                    return (
+                      <button
+                        key={ag.id}
+                        onClick={() => {
+                          setSelectedAgent(ag.id);
+                          // Initialize different greeting
+                          let greeting = "";
+                          if (ag.id === "editor") greeting = "Hola, soy tu Editor Profesional. Puedo ayudarte a estructurar tus capítulos, perfeccionar el ritmo de tu narrativa o desarrollar tus personajes. ¿De qué trata tu libro?";
+                          else if (ag.id === "corrector") greeting = "¡Hola! Soy tu Corrector Ortotipográfico. Analizo tu manuscrito en busca de errores gramaticales, inconsistencias narrativas y pulo tus guiones y rayas de diálogo. ¿Qué texto revisamos?";
+                          else if (ag.id === "disenador") greeting = "Hola, soy tu Diseñador de Portadas. Juntos crearemos la carátula perfecta que cautivará a tus lectores a primera vista. ¿Qué arquetipo visual prefieres?";
+                          else if (ag.id === "traductor") greeting = "Greetings! Soy tu Traductor Experto de Autoria. Adaptaré tu obra a más de 100 idiomas respetando la esencia de tu estilo literario. ¿A qué idioma traducimos hoy?";
+                          else if (ag.id === "kdp") greeting = "Hola, soy tu Consultor de Amazon KDP e ISBN. Te daré el checklist exacto de márgenes de imprenta, sangrías y claves fiscales de USA para cobrar tus regalías con éxito. ¿Cuál es tu duda técnica?";
+                          else if (ag.id === "marketing") greeting = "¡Hola! Soy tu Especialista en Ads y Marketing. Te enseñaré a estructurar anuncios en Meta, TikTok y Google Ads para que consigas lectores consistentes. ¿Tienes presupuesto de anuncios?";
+                          else greeting = "¡Hola, escritor! Soy tu Coach Editorial. Mantendré tu ritmo de escritura activo y te enseñaré cómo evitar el bloqueo de página en blanco. ¿Qué objetivo de palabras tienes hoy?";
+                          
+                          setAgentChat([{ sender: "agent", text: greeting }]);
+                        }}
+                        className={`w-full text-left p-2.5 rounded-xl border flex items-center gap-3 transition-all cursor-pointer ${
+                          isSelected 
+                            ? "bg-slate-900 border-rose-500 shadow-md scale-[1.01]" 
+                            : "bg-slate-950 border-slate-850 hover:bg-slate-900/60 " + ag.border
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${ag.bg} flex items-center justify-center text-slate-200 shrink-0`}>
+                          <AgIcon className="w-4 h-4" />
+                        </div>
+                        <div className="truncate flex-1">
+                          <h5 className="text-[11px] font-bold text-white block leading-none">{ag.name}</h5>
+                          <span className="text-[9px] text-slate-400 block truncate mt-1">{ag.desc}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Agent Chat Sandbox Screen */}
+                <div className="lg:col-span-8 bg-slate-950 border border-slate-850 rounded-2xl flex flex-col justify-between h-[360px]">
+                  {/* Chat header */}
+                  <div className="bg-slate-900/80 p-3 border-b border-slate-850 flex justify-between items-center px-4">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span className="text-xs font-bold text-white font-mono uppercase">
+                        Chat en Vivo con: {selectedAgent === "editor" ? "Editor Profesional" : selectedAgent === "corrector" ? "Corrector Ortotipográfico" : selectedAgent === "disenador" ? "Diseñador de Portadas" : selectedAgent === "traductor" ? "Traductor Experto" : selectedAgent === "kdp" ? "Experto en Amazon KDP" : selectedAgent === "marketing" ? "Especialista en Ads" : "Coach Editorial"}
+                      </span>
+                    </div>
+                    <span className="text-[9px] font-mono text-slate-500 uppercase">AUTORIA AI NETWORK</span>
+                  </div>
+
+                  {/* Messages container */}
+                  <div className="flex-1 p-4 space-y-3.5 overflow-y-auto">
+                    {agentChat.map((msg, idx) => (
+                      <div key={idx} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"} animate-fadeIn`}>
+                        <div className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed ${
+                          msg.sender === "user" 
+                            ? "bg-rose-600 text-white rounded-tr-none font-medium" 
+                            : "bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-none font-normal"
+                        }`}>
+                          <p className="whitespace-pre-wrap">{msg.text}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Input container */}
+                  <div className="bg-slate-900/60 p-3 border-t border-slate-850 flex gap-2">
+                    <input
+                      type="text"
+                      value={agentMessage}
+                      onChange={(e) => setAgentMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const triggerBtn = document.getElementById("send-agent-chat-btn");
+                          if (triggerBtn) triggerBtn.click();
+                        }
+                      }}
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none focus:border-rose-500"
+                      placeholder={`Escríbele una duda a tu ${selectedAgent}...`}
+                    />
+                    <button
+                      id="send-agent-chat-btn"
+                      onClick={() => {
+                        const query = agentMessage.trim();
+                        if (!query) return;
+                        
+                        const newChat = [...agentChat, { sender: "user" as const, text: query }];
+                        setAgentChat(newChat);
+                        setAgentMessage("");
+                        
+                        setTimeout(() => {
+                          let reply = "";
+                          const q = query.toLowerCase();
+                          
+                          if (selectedAgent === "editor") {
+                            if (q.includes("misterio") || q.includes("novela")) {
+                              reply = "Excelente premisa literaria. Para una novela de ese género, te recomiendo alternar la tensión entre el conflicto externo (el misterio o secreto local) y el conflicto interno del protagonista (sus miedos o pasado). Intentemos estructurar los primeros 3 capítulos para mantener al lector enganchado.";
+                            } else {
+                              reply = "Me parece un enfoque fascinante. Como tu Editor, te aconsejo definir primero el conflicto central de la obra y establecer arcos de personaje firmes desde el primer capítulo. ¿Cuál es el gran giro narrativo de tu historia?";
+                            }
+                          } else if (selectedAgent === "corrector") {
+                            reply = "Entendido. Recuerda que para diálogos literarios pulidos, es obligatorio utilizar la raya larga de diálogo (—) y no el guión común. Esto garantiza una compaginación limpia de nivel profesional. Envíame un párrafo y lo corregiré ortotipográficamente en segundos.";
+                          } else if (selectedAgent === "disenador") {
+                            reply = "Entendido. Para tu temática, te aconsejo un diseño de arquetipo 'Minimalista Suizo' o 'Cósmico', priorizando una sola tipografía estilizada como Space Grotesk. Generemos la maqueta física de tu libro en el Paso 5 para previsualizar los resultados.";
+                          } else if (selectedAgent === "traductor") {
+                            reply = "Excelente elección. La localización cultural es crucial para que un libro suene natural en inglés o portugués. Adaptaremos los modismos locales para que el lector extranjero experimente la misma emoción. ¿Qué borrador traducimos primero?";
+                          } else if (selectedAgent === "kdp") {
+                            reply = "Para publicar de forma seria en Amazon KDP, debes maquetar tu PDF en tamaño 5.5\" x 8.5\" con sangría obligatoria de 0.125\". El lomo debe calcularse multiplicando el número de páginas por 0.00225\". Te sugiero usar nuestro simulador de márgenes interactivo del Paso 4 para asegurar la aprobación.";
+                          } else if (selectedAgent === "marketing") {
+                            reply = "¡Hola! Para vender con fuerza, te sugiero un embudo de conversión cruzado. Iniciaremos con anuncios dirigidos a lectores de tu género en Instagram, los llevaremos a una landing page simplificada de Autoria, y de allí a Amazon KDP para la compra. Esto multiplica tu conversión hasta un 15%.";
+                          } else {
+                            reply = "El éxito literario no es cuestión de talento, es cuestión de constancia. Te sugiero un reto diario de 500 palabras escritas sin juzgar la calidad. Luego utilizas a nuestro Corrector para pulir la ortografía. ¡Hoy es el día ideal para empezar!";
+                          }
+                          setAgentChat([...newChat, { sender: "agent" as const, text: reply }]);
+                        }, 1000);
+                      }}
+                      className="bg-rose-600 hover:bg-rose-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs font-mono"
+                    >
+                      Enviar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* WHATSAPP VIRTUAL NUMBER STRATEGIC ADVISOR (USER REQUEST #7) */}
+            <section id="whatsapp-virtual-assistant" className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 md:p-8 space-y-6 relative overflow-hidden backdrop-blur-sm animate-fade-in">
+              <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+              <div className="flex flex-col sm:flex-row items-baseline sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+                <div className="space-y-1">
+                  <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border border-emerald-500/15">
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    Virtual Number & Communication
+                  </span>
+                  <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+                    Asesoría de Canales: Tu WhatsApp Virtual Profesional
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-400 max-w-3xl">
+                    Protege tu privacidad, separa tu vida personal de la profesional y construye un canal de comunicación de confianza para interactuar de forma segura con lectores, editoriales y clientes.
+                  </p>
+                </div>
+
+                <div className="bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-1.5 rounded-xl text-xs text-emerald-400 font-mono font-bold">
+                  Asesoría Profesional de Comunicación
+                </div>
+              </div>
+
+              {/* DETAILED VALUE PROPOSITION & BENEFITS BOX FOR THE AUTHOR */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-950/60 border border-slate-800/60 p-5 rounded-2xl">
+                {/* Benefits */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5 font-mono">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    ¿Cómo beneficia esto al Autor? (Privacidad & Control)
+                  </h4>
+                  <ul className="space-y-3 text-xs text-slate-300">
+                    <li className="flex gap-2 items-start">
+                      <span className="text-emerald-400 font-bold mt-0.5">✓</span>
+                      <div>
+                        <strong className="text-white">Privacidad y Seguridad Absoluta:</strong> No expongas tu número de teléfono personal en internet, redes sociales o solapas de tus libros. Evita llamadas inapropiadas o spam de desconocidos de forma 100% segura.
+                      </div>
+                    </li>
+                    <li className="flex gap-2 items-start">
+                      <span className="text-emerald-400 font-bold mt-0.5">✓</span>
+                      <div>
+                        <strong className="text-white">Doble Cuenta Activa en el Móvil:</strong> Puedes configurar la aplicación oficial de <span className="text-emerald-400">WhatsApp Business</span> utilizando el número virtual de forma independiente en tu mismo teléfono móvil actual, sin interferir con tu chat personal.
+                      </div>
+                    </li>
+                    <li className="flex gap-2 items-start">
+                      <span className="text-emerald-400 font-bold mt-0.5">✓</span>
+                      <div>
+                        <strong className="text-white">Establece Horarios y Descanso:</strong> Configura mensajes automáticos de bienvenida, respuestas rápidas y define un horario comercial de atención para que las alertas no interrumpan tus horas de descanso o escritura creativa.
+                      </div>
+                    </li>
+                    <li className="flex gap-2 items-start">
+                      <span className="text-emerald-400 font-bold mt-0.5">✓</span>
+                      <div>
+                        <strong className="text-white">Branding & Prestigio Editorial:</strong> Comunica una imagen corporativa seria y profesional a editoriales, distribuidores, y diseña promociones de preventa o soporte de envíos con un número dedicado a tu marca de autor.
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Usage flow */}
+                <div className="space-y-4 border-t md:border-t-0 md:border-l border-slate-800/85 pt-4 md:pt-0 md:pl-6">
+                  <h4 className="text-xs font-bold text-amber-400 uppercase tracking-widest flex items-center gap-1.5 font-mono">
+                    <Smartphone className="w-4 h-4 text-amber-400" />
+                    ¿Cómo lo usa un Autor? (Flujo de Trabajo Paso a Paso)
+                  </h4>
+                  <div className="space-y-3.5 text-xs text-slate-300">
+                    <div className="flex gap-3">
+                      <div className="w-5 h-5 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-[10px] font-bold font-mono text-amber-400 shrink-0">1</div>
+                      <p className="leading-relaxed">
+                        <strong className="text-white">Adquiere un Número Virtual:</strong> Elige un proveedor compatible con WhatsApp como <span className="text-amber-400">Hushed</span> (fácil, app móvil integrada) o <span className="text-amber-400">Twilio</span> (avanzado para envíos programados) según el volumen de tu negocio.
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="w-5 h-5 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-[10px] font-bold font-mono text-amber-400 shrink-0">2</div>
+                      <p className="leading-relaxed">
+                        <strong className="text-white">Descarga WhatsApp Business:</strong> Obtén la aplicación oficial gratuita en tu iPhone o Android. Permite gestionar catálogos de tus libros, enlaces de compra y etiquetas inteligentes para organizar tus contactos.
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="w-5 h-5 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-[10px] font-bold font-mono text-amber-400 shrink-0">3</div>
+                      <p className="leading-relaxed">
+                        <strong className="text-white">Verifica y Activa el Canal:</strong> Introduce tu número virtual en la app. Recibirás un código de 6 dígitos vía SMS (que puedes probar de forma interactiva en nuestro simulador de abajo) para validar tu cuenta al instante.
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="w-5 h-5 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-[10px] font-bold font-mono text-amber-400 shrink-0">4</div>
+                      <p className="leading-relaxed">
+                        <strong className="text-white">Soporte y Preventas:</strong> ¡Listo! Publica tu enlace de WhatsApp en tu web o redes para coordinar preventas de tus libros, recibir testimonios de lectores, o dar soporte de envíos físicos sin arriesgar tu número personal.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SERVICE COMPARISON ROW */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  {
+                    name: "Hushed",
+                    pros: "Excelente para uso personal inmediato, fácil de usar, activación sin contratos, aplicación móvil muy sólida y estable.",
+                    cons: "No tiene una API oficial de programación para automatizar envíos masivos.",
+                    cost: "Muy Económico (~$2.5 a $5 USD/mes)",
+                    use: "Óptimo para soporte básico a lectores o para verificar tu cuenta de WhatsApp Business móvil en minutos.",
+                    badge: "Más Rápido & Simple",
+                    badgeColor: "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                  },
+                  {
+                    name: "Twilio",
+                    pros: "El estándar de oro para programadores. Números virtuales altamente serios, estables, cobertura internacional masiva.",
+                    cons: "Requiere configuración técnica avanzada o código para enviar mensajes.",
+                    cost: "Pago por uso (Fracciones de centavos por SMS)",
+                    use: "Ideal si deseas programar notificaciones automáticas de compras o integrar bots complejos en tu sistema.",
+                    badge: "Más Técnico & Robusto",
+                    badgeColor: "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                  },
+                  {
+                    name: "WhatsApp Business API",
+                    pros: "Herramienta corporativa oficial directa de Meta. Permite multi-agentes reales, verificación verde de marca y estabilidad absoluta.",
+                    cons: "Proceso estricto de aprobación de plantillas de mensajes y verificación de negocio en Meta Business Manager.",
+                    cost: "Costo fijo + costo por conversación",
+                    use: "Diseñado para editoriales, agencias literarias o autores con altos volúmenes de soporte y ventas diarias.",
+                    badge: "Máximo Nivel Corporativo",
+                    badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                  }
+                ].map((serv, idx) => (
+                  <div key={idx} className="bg-slate-950 border border-slate-850 p-5 rounded-2xl flex flex-col justify-between space-y-4 hover:border-slate-800 transition-all">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-slate-100 uppercase tracking-wider">{serv.name}</span>
+                        <span className={`text-[8.5px] font-mono font-bold uppercase px-2 py-0.5 rounded border ${serv.badgeColor}`}>{serv.badge}</span>
+                      </div>
+                      
+                      <div className="space-y-2 text-[11px] leading-relaxed">
+                        <p className="text-slate-300">
+                          <strong className="text-emerald-400 block mb-0.5 font-mono text-[10px] uppercase">Ventajas:</strong> {serv.pros}
+                        </p>
+                        <p className="text-slate-400">
+                          <strong className="text-rose-400 block mb-0.5 font-mono text-[10px] uppercase">Limitaciones:</strong> {serv.cons}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-900 font-mono text-[10.5px]">
+                      <div className="flex justify-between pb-1 text-slate-400">
+                        <span>Costo Proyectado:</span>
+                        <strong className="text-slate-200">{serv.cost}</strong>
+                      </div>
+                      <div className="text-slate-450 leading-normal text-[10px] mt-2 bg-slate-900 p-2.5 rounded-lg border border-slate-850">
+                        <strong className="text-slate-300 block mb-1">Mejor Caso de Uso:</strong>
+                        {serv.use}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* VIRTUAL SMS CODE INBOX SIMULATOR (HIGHLY INTERACTIVE) */}
+              <div className="bg-slate-950 border border-slate-850 rounded-2xl p-5 space-y-4 font-mono text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-850 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span className="text-slate-200 font-bold uppercase tracking-wider">Simulador de Número Virtual de Soporte</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 uppercase">Sandbox de Activación Móvil</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                  <div className="space-y-3 text-slate-300">
+                    <p className="text-[11px] leading-relaxed font-sans">
+                      ¿Quieres ver cómo funciona la verificación de WhatsApp con tu número virtual? Haz clic en los botones para simular la asignación de un número y el envío del SMS con el código de activación oficial de WhatsApp Business.
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1.5">
+                      <button
+                        onClick={() => {
+                          setWhatsappAssistantChat([
+                            ...whatsappAssistantChat,
+                            { sender: "user", text: "Asignar número virtual de demostración" },
+                            { sender: "agent", text: "⚡ Número virtual asignado con éxito: +1 (202) 555-0143 (Hushed Washington DC). Listo para recibir el SMS de verificación de WhatsApp Business." }
+                          ]);
+                        }}
+                        className="bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 font-bold px-3 py-2 rounded-lg text-[10.5px] cursor-pointer"
+                      >
+                        1. Obtener Número (+1)
+                      </button>
+                      <button
+                        onClick={() => {
+                          const code = Math.floor(100000 + Math.random() * 900000);
+                          setWhatsappAssistantChat([
+                            ...whatsappAssistantChat,
+                            { sender: "user", text: "Simular recepción de SMS de verificación de WhatsApp" },
+                            { sender: "agent", text: `📥 [INBOX SMS] Mensaje recibido de WhatsApp:\n«Tu código de verificación de WhatsApp Business es: ${code}. No compartas este código con nadie.»` }
+                          ]);
+                          showToast("SMS de verificación recibido en el sandbox móvil.", "success");
+                        }}
+                        className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-3.5 py-2 rounded-lg text-[10.5px] cursor-pointer"
+                      >
+                        2. Enviar SMS de Verificación
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Virtual Inbox Phone Screen Mockup */}
+                  <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 space-y-3 max-h-[160px] overflow-y-auto">
+                    <span className="text-[8px] text-slate-500 uppercase block tracking-widest text-center">Bandeja de SMS de tu número virtual Hushed</span>
+                    {whatsappAssistantChat.slice(-3).map((chat, i) => (
+                      <div key={i} className="text-[10px] leading-relaxed border-t border-slate-850 pt-2 first:border-t-0">
+                        <span className={`text-[8.5px] font-bold block ${chat.sender === "user" ? "text-rose-400" : "text-emerald-400"}`}>
+                          {chat.sender === "user" ? "USER ACTION" : "VIRTUAL DEVICE INBOX"}
+                        </span>
+                        <p className="text-slate-350">{chat.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* B2B & ENTERPRISE API CONSOLE */}
+            <section id="b2b-api-console" className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 md:p-8 space-y-6 relative overflow-hidden backdrop-blur-sm animate-fade-in">
+              <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+                <Terminal className="w-32 h-32 text-indigo-500" />
+              </div>
+
+              <div className="space-y-1">
+                <span className="inline-flex items-center gap-1 bg-indigo-500/10 text-indigo-400 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border border-indigo-500/15">
+                  <Terminal className="w-3.5 h-3.5" />
+                  B2B API Integration
+                </span>
+                <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
+                  Consola de Integración y API para Empresas
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-400">
+                  Las universidades, imprentas corporativas y agencias literarias pueden automatizar la maquetación y la subida de manuscritos mediante nuestra REST API seria. Haz una llamada de prueba a continuación.
+                </p>
+              </div>
+
+              <div className="bg-slate-950 border border-slate-850 rounded-2xl p-4 md:p-5 font-mono text-xs space-y-4">
+                <div className="flex flex-wrap items-center gap-2.5 bg-slate-900 p-2.5 rounded-xl border border-slate-850">
+                  <span className="bg-emerald-500 text-slate-950 font-black px-2 py-0.5 rounded text-[9px] uppercase font-bold">POST</span>
+                  <span className="text-slate-300 select-all font-mono text-[11px]">https://api.autoria.ai/v1/{selectedApiEndpoint}</span>
+                  
+                  <div className="flex-1"></div>
+                  
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className="text-slate-500 text-[10px]">Endpoint:</span>
+                    <select
+                      value={selectedApiEndpoint}
+                      onChange={(e) => {
+                        setSelectedApiEndpoint(e.target.value);
+                        setApiRouteResult("");
+                      }}
+                      className="bg-slate-950 text-slate-200 border border-slate-800 rounded px-2 py-0.5"
+                    >
+                      <option value="books/create">/books/create (Registrar nuevo manuscrito)</option>
+                      <option value="layout/compile">/layout/compile (Compilar PDF suizo KDP)</option>
+                      <option value="translation/translate">/translation/translate (Traducción IA)</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setIsCallingApi(true);
+                      setTimeout(() => {
+                        setIsCallingApi(false);
+                        if (selectedApiEndpoint === "books/create") {
+                          setApiRouteResult(
+                            JSON.stringify({
+                              status: "success",
+                              book_id: "book_9f823a01dc892",
+                              title: "El Manuscrito Perdido",
+                              author: "Carlos Mendoza",
+                              sha256_hash: "f9e823d02a39281bc89a71ea94511c1e0",
+                              created_at: new Date().toISOString(),
+                              coaching_synced: true,
+                              active_license: "unlimited_tier"
+                            }, null, 2)
+                          );
+                        } else if (selectedApiEndpoint === "layout/compile") {
+                          setApiRouteResult(
+                            JSON.stringify({
+                              status: "compiled",
+                              compile_duration_ms: 1480,
+                              pdf_dpi: 300,
+                              calculated_margins: {
+                                inside_gutter_in: 0.375,
+                                outside_margin_in: 0.25,
+                                bleed_margin_in: 0.125
+                              },
+                              download_url: "https://storage.autoria.ai/compiled/book_9f823a01dc892.pdf"
+                            }, null, 2)
+                          );
+                        } else {
+                          setApiRouteResult(
+                            JSON.stringify({
+                              status: "translated",
+                              target_languages: ["en", "pt", "fr"],
+                              characters_processed: 12480,
+                              translation_engine: "autoria-translator-v2",
+                              success: true
+                            }, null, 2)
+                          );
+                        }
+                      }, 1000);
+                    }}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition-all cursor-pointer shadow"
+                  >
+                    {isCallingApi ? "Enviando..." : "Test Endpoint"}
+                  </button>
+                </div>
+
+                {apiRouteResult ? (
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-[11px] text-emerald-400 overflow-x-auto whitespace-pre">
+                    {apiRouteResult}
+                  </div>
+                ) : (
+                  <div className="bg-slate-900/50 border border-dashed border-slate-850 rounded-xl p-6 text-center text-xs text-slate-500">
+                    {isCallingApi ? "Realizando handshake B2B..." : "Haz clic en 'Test Endpoint' para simular una respuesta JSON real del backend de Autoria."}
+                  </div>
+                )}
+              </div>
+            </section>
 
         {/* INTERACTIVE VIDEO STORIES / MASTERCLASS DEMO STEP HUB */}
         <section className="space-y-8 no-print animate-fade-in relative">
@@ -3792,26 +5089,35 @@ export function LandingPage({
                       } catch (err) {}
 
                       // Admin fallback check
-                      const isAdmin = loginEmail.toLowerCase().trim() === "marketingandcoach@gmail.com";
+                      const loginEmailLower = loginEmail.toLowerCase().trim();
+                      const isAdmin = 
+                        loginEmailLower === "marketingandcoach@gmail.com" ||
+                        loginEmailLower === "ruthgmedina@gmail.com" ||
+                        loginEmailLower === "soporte@autoria.ai" ||
+                        loginEmailLower === "pagos@autoria.ai";
+                      
                       const matchedUser = usersList.find(
-                        (u: any) => u.email.toLowerCase().trim() === loginEmail.toLowerCase().trim()
+                        (u: any) => u.email.toLowerCase().trim() === loginEmailLower
                       );
 
                       if (isAdmin || matchedUser) {
-                        // If administering, allow demo credentials or validated custom password
-                        if (isAdmin && (loginPassword === "admin" || loginPassword === "" || loginPassword === "••••••••")) {
-                          // Admin bypass
-                          setLoginName("Coach Autorizado");
-                          setLoginWorkspace("Suite de Administración Coach");
+                        // Admin bypass: allow any password or specific default ones
+                        if (isAdmin) {
+                          const displayEmail = loginEmailLower;
+                          const displayName = displayEmail === "ruthgmedina@gmail.com" ? "Ruth Medina" : "Coach Autorizado";
+                          const displayWorkspace = displayEmail === "ruthgmedina@gmail.com" ? "Socia de Élite Ruth" : "Suite de Administración Coach";
+                          
+                          setLoginName(displayName);
+                          setLoginWorkspace(displayWorkspace);
                           setLoginStatus("verifying");
                           setTimeout(() => {
                             setLoginStatus("success");
                             setTimeout(() => {
                               setShowLoginModal(false);
                               onNavigateToStudio({
-                                email: "marketingandcoach@gmail.com",
-                                name: "Coach Autorizado",
-                                workspace: "Suite de Administración Coach"
+                                email: displayEmail,
+                                name: displayName,
+                                workspace: displayWorkspace
                               });
                               setLoginStatus("idle");
                             }, 1000);
@@ -3837,14 +5143,14 @@ export function LandingPage({
                           setAuthErrorMessage("La contraseña ingresada es incorrecta.");
                         }
                       } else {
-                        setAuthErrorMessage("Este correo no se encuentra registrado. Si eres nuevo, ve a la pestaña 'Crear Cuenta de Alumno' para registrarte.");
+                        setAuthErrorMessage("Este correo no se encuentra registrado. Si eres nuevo, ve a la pestaña 'Crear Cuenta de Alumno' para registrarte o usa el acceso directo.");
                       }
                     }}
                     className="space-y-4"
                   >
                     {/* Login Email */}
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Correo de Alumno:</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Correo de Autor o Alumno:</label>
                       <input
                         type="email"
                         required
@@ -3857,14 +5163,14 @@ export function LandingPage({
 
                     {/* Login Password */}
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Contraseña Personal:</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-400 block font-mono">Contraseña Personal de Autor:</label>
                       <input
                         type="password"
                         required
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
                         className="w-full text-xs bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none focus:border-amber-500/80 transition-all font-mono"
-                        placeholder="Tu contraseña secreta"
+                        placeholder="Tu contraseña secreta (o cualquier contraseña para Coach)"
                       />
                     </div>
 
@@ -3874,8 +5180,56 @@ export function LandingPage({
                         className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold py-3.5 rounded-xl text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-100"
                       >
                         <ShieldCheck className="w-4 h-4" />
-                        <span>Verificar e Ingresar</span>
+                        <span>Verificar e Ingresar al Studio</span>
                       </button>
+                    </div>
+
+                    {/* Quick Access helper for Coach & Ruth */}
+                    <div className="pt-3 border-t border-slate-900 space-y-2">
+                      <div className="text-[9px] text-slate-500 font-mono text-center uppercase tracking-wider">
+                        Acceso Rápido para Autores de Élite
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLoginEmail("marketingandcoach@gmail.com");
+                            setLoginPassword("admin");
+                            showToast("Credenciales de marketingandcoach cargadas.", "success");
+                          }}
+                          className="flex-1 bg-slate-900/80 hover:bg-slate-850 border border-slate-800/80 hover:border-amber-500/30 text-slate-300 font-bold py-2 px-2.5 rounded-xl text-[10px] transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <span>Coach (marketingandcoach)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLoginEmail("ruthgmedina@gmail.com");
+                            setLoginPassword("admin");
+                            showToast("Credenciales de ruthgmedina cargadas.", "success");
+                          }}
+                          className="flex-1 bg-slate-900/80 hover:bg-slate-850 border border-slate-800/80 hover:border-amber-500/30 text-slate-300 font-bold py-2 px-2.5 rounded-xl text-[10px] transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <span>Ruth (ruthgmedina)</span>
+                        </button>
+                      </div>
+
+                      <div className="pt-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowLoginModal(false);
+                            onNavigateToStudio({
+                              email: "marketingandcoach@gmail.com",
+                              name: "Coach Autorizado",
+                              workspace: "Suite de Administración Coach"
+                            });
+                          }}
+                          className="text-[11px] text-amber-400 hover:text-amber-300 font-mono font-bold hover:underline transition-all cursor-pointer flex items-center justify-center gap-1 mx-auto"
+                        >
+                          ⚡ Entrar Directo (Bypass Rápido DIAGRAMMERS Studio)
+                        </button>
+                      </div>
                     </div>
                   </form>
                 ) : (
@@ -4032,7 +5386,7 @@ export function LandingPage({
                       ¿Aún no te has inscrito al coaching de compaginación y deseas recibir tu Clave de Acceso privada de DIAGRAMMERS para usar el suite?
                     </p>
                     <a
-                      href="mailto:marketingandcoach@gmail.com?subject=Solicitud de Coaching y Clave de Acceso DIAGRAMMERS&body=Hola Coach,%0D%0A%0D%0AHe estado revisando la Suite Editorial DIAGRAMMERS y me interesa muchísimo adquirir tu servicio de coaching estratégico corporativo para aprender a compaginar y maquetar mis obras editoriales con calidad Adobe InDesign.%0D%0A%0D%0APor favor, bríndame los detalles del programa de entrenamiento, precios de inscripción y mi Clave de Acceso exclusiva para registrarme en el sistema.%0D%0A%0D%0AMi Nombre Completo: %0D%0AMi Correo Institucional: %0D%0A¡Muchas gracias!"
+                      href="mailto:soporte@autoria.ai?subject=Solicitud de Coaching y Clave de Acceso DIAGRAMMERS&body=Hola Coach,%0D%0A%0D%0AHe estado revisando la Suite Editorial DIAGRAMMERS y me interesa muchísimo adquirir tu servicio de coaching estratégico corporativo para aprender a compaginar y maquetar mis obras editoriales con calidad Adobe InDesign.%0D%0A%0D%0APor favor, bríndame los detalles del programa de entrenamiento, precios de inscripción y mi Clave de Acceso exclusiva para registrarme en el sistema.%0D%0A%0D%0AMi Nombre Completo: %0D%0AMi Correo Institucional: %0D%0A¡Muchas gracias!"
                       className="inline-flex items-center justify-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold px-4 py-3 rounded-xl text-xs transition-all border border-amber-500/20 w-full text-center shadow-lg"
                       style={{ textDecoration: "none" }}
                     >

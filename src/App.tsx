@@ -71,6 +71,7 @@ import { BookStyleSettings, Chapter, BookMetadata, SimulatedPage, ARCHETYPES, Il
 import { TEXT_TEMPLATES, GENRE_PRESETS } from "./data";
 import { LandingPage } from "./components/LandingPage";
 import { DiagrammersLogo, DiagrammersFullLogo } from "./components/DiagrammersLogo";
+import { AutoriaLogo } from "./components/AutoriaLogo";
 import { HostiaSoftLogo } from "./components/HostiaSoftLogo";
 import { LOCALES, SupportedLanguages } from "./locales";
 import mammoth from "mammoth";
@@ -330,7 +331,7 @@ export default function App() {
     publisherLogo: "",
     logoPlacement: "both",
     donationActive: true,
-    donationLink: "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=ruthgmedina@gmail.com&currency_code=USD&item_name=Donacion%20DIAGRAMMERS%20Studio",
+    donationLink: "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=pagos@hostiasoft.com&currency_code=USD&item_name=Donacion%20DIAGRAMMERS%20Studio",
     genre: "Novela",
     trimSize: "6in_9in",
     targetPdfImpreso: true,
@@ -1078,9 +1079,9 @@ export default function App() {
   const [showSyncNotification, setShowSyncNotification] = useState<boolean>(false);
 
   // --- AUTHOR GATEWAY CONFIG STATE (PAYPAL, STRIPE, BANK) ---
-  const [payPalEmail, setPayPalEmail] = useState<string>("ruthgmedina@gmail.com");
+  const [payPalEmail, setPayPalEmail] = useState<string>("pagos@autoria.ai");
   const [stripePubKey, setStripePubKey] = useState<string>("");
-  const [bankTransferData, setBankTransferData] = useState<string>("IBAN: ES21 1234 5678 9012 3456 7890\nBeneficiario: Ruth G. Medina\nConcepto: [Título del Libro]");
+  const [bankTransferData, setBankTransferData] = useState<string>("IBAN: ES21 1234 5678 9012 3456 7890\nBeneficiario: Nombre del Autor / Editorial\nConcepto: [Título del Libro]");
   const [selectedConfigPaymentMethod, setSelectedConfigPaymentMethod] = useState<"paypal" | "stripe" | "bank">("paypal");
   const [paymentIsTestMode, setPaymentIsTestMode] = useState<boolean>(true);
   const [currencyCode, setCurrencyCode] = useState<string>("EUR");
@@ -1166,10 +1167,17 @@ export default function App() {
     if (payload.bookSalesPrice !== undefined) localStorage.setItem("payment_book_price", JSON.stringify(payload.bookSalesPrice));
   };
 
-  const fetchCloudSyncInfo = async (showBannerNotification = false) => {
+  const fetchCloudSyncInfo = async (showBannerNotification = false, retryCount = 3, delayMs = 1500) => {
     try {
       const res = await fetch("/api/sync/load");
-      if (!res.ok) return;
+      if (!res.ok) {
+        if (retryCount > 0) {
+          setTimeout(() => {
+            fetchCloudSyncInfo(showBannerNotification, retryCount - 1, delayMs * 1.5);
+          }, delayMs);
+        }
+        return;
+      }
       const data = await res.json();
       if (data && !data.empty && data.payload) {
         setCloudSaveExists(true);
@@ -1194,7 +1202,14 @@ export default function App() {
         setCloudSaveExists(false);
       }
     } catch (e) {
-      console.error("Error fetching cloud sync data:", e);
+      if (retryCount > 0) {
+        console.warn(`Error connecting, retrying sync in ${delayMs}ms... (${retryCount} retries remaining)`);
+        setTimeout(() => {
+          fetchCloudSyncInfo(showBannerNotification, retryCount - 1, delayMs * 1.5);
+        }, delayMs);
+      } else {
+        console.error("Error fetching cloud sync data:", e);
+      }
     }
   };
 
@@ -1432,7 +1447,7 @@ export default function App() {
       publisherLogo: "",
       logoPlacement: "both",
       donationActive: true,
-      donationLink: "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=ruthgmedina@gmail.com&currency_code=USD&item_name=Donacion%20DIAGRAMMERS%2520Studio",
+      donationLink: "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=pagos@hostiasoft.com&currency_code=USD&item_name=Donacion%20DIAGRAMMERS%2520Studio",
       genre: "Novela",
       trimSize: "6in_9in",
       targetPdfImpreso: true,
@@ -4954,7 +4969,7 @@ ${generatedScreenplayText}
 
   const downloadSoftwareRegistrationDoc = () => {
     const currentDate = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" });
-    const userEmail = (currentUser && currentUser.email) || "marketingandcoach@gmail.com";
+    const userEmail = (currentUser && currentUser.email) || "usuario@autoria.ai";
     
     const docHtml = `
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
@@ -5856,15 +5871,16 @@ ${generatedScreenplayText}
       {/* 1. MAIN GLOBAL HEADER (Invisible during print) */}
       <header id="app-header" className="no-print bg-slate-950 border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 shadow-md">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center select-none">
-            <HostiaSoftLogo className="w-10 h-10 shrink-0" glow />
+          <div className="flex items-center justify-center select-none gap-2">
+            <HostiaSoftLogo className="w-9 h-9 shrink-0" glow />
+            <AutoriaLogo className="w-9 h-9 shrink-0" glow />
           </div>
           <div>
             <h1 className="text-lg sm:text-xl font-black tracking-[0.05em] text-white flex items-center gap-1.5 flex-wrap" style={{ fontFamily: '"Space Grotesk", sans-serif' }}>
               HOSTIA<span className="bg-gradient-to-r from-fuchsia-500 via-pink-500 to-orange-400 bg-clip-text text-transparent font-bold">SOFT</span>
               <span className="text-slate-800 text-sm mx-1">|</span>
-              <span className="text-sm font-bold text-slate-300">DIAGRAMMERS</span>
-              <span className="text-[9px] tracking-normal font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded">STUDIO V2.5</span>
+              <span className="text-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-rose-400 to-indigo-400">DIAGRAMMERS / AUTORIA</span>
+              <span className="text-[9px] tracking-normal font-mono font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded">STUDIO V2.5</span>
             </h1>
             <p className="text-xs text-slate-400">
               {language === "en" 
@@ -9620,7 +9636,7 @@ ${generatedScreenplayText}
                             <strong>105% Gratuito:</strong> Tu servidor de Node.js Express, la base de datos Firestore y el alojamiento web se ejecutan de manera gratuita en los servidores dedicados proporcionados por la plataforma.
                           </div>
                           <div className="bg-emerald-500/5 p-2 rounded-lg border border-emerald-555/15 text-[10px] text-emerald-300">
-                            <strong>Cero Comisiones:</strong> Cuando promociones masivamente tu libro y tus compradores efectúen un pago a tu dirección <strong className="text-white select-all font-mono">ruthgmedina@gmail.com</strong>, el cobro entra directo a ti. ¡Sin cargos de intermediarios!
+                            <strong>Cero Comisiones:</strong> Cuando promociones masivamente tu libro y tus compradores efectúen un pago a tu dirección <strong className="text-white select-all font-mono">{payPalEmail}</strong>, el cobro entra directo a ti. ¡Sin cargos de intermediarios!
                           </div>
                         </div>
                       </div>
@@ -13439,7 +13455,7 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                   Google Drive Workspace
                 </h4>
                 <p className="text-xs text-slate-400">
-                  Autenticado de forma segura: <span className="font-mono text-amber-400 font-medium">{currentUser?.email || "marketingandcoach@gmail.com"}</span>
+                  Autenticado de forma segura: <span className="font-mono text-amber-400 font-medium">{currentUser?.email || "usuario@autoria.ai"}</span>
                 </p>
               </div>
             </div>
@@ -15141,7 +15157,7 @@ Al aportar, no solo reciben un ${pitchEquity}% del capital dividido entre el sin
                           className="w-full bg-slate-950 hover:bg-slate-850 border border-slate-800 text-amber-400 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all text-xs cursor-pointer"
                         >
                           <Mail className="w-4 h-4 text-amber-400" />
-                          <span>Enviar Mail de Coaching de Autores (ruthgmedina@gmail.com)</span>
+                          <span>Enviar Mail de Coaching de Autores</span>
                         </a>
                       </div>
 
